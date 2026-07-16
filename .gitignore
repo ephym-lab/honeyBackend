@@ -30,4 +30,6 @@ htmlcov/
 # Alembic
 alembic/versions/*.pyc
 uploads/
+.vscode/
+pyrightconfig.json
 
