@@ -41,3 +41,18 @@ class TokenResponse(BaseModel):
 class RegisterResponse(BaseModel):
     success: bool = True# "token": access_token,
     data: RegisterData
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+class BasicResponse(BaseModel):
+    success: bool
+    message: str

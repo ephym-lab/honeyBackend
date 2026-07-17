@@ -41,3 +41,37 @@ async def admin_login(
     login_data = Login(email=credentials.email, password=credentials.password)
     login_service = LoginService(db)
     return login_service.login_user(login_data)
+
+from app.schemas.auth import ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest, BasicResponse
+from app.services.password_reset_service import PasswordResetService
+
+@router.post("/forgot-password", response_model=BasicResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """Request a password reset OTP."""
+    service = PasswordResetService(db)
+    service.process_forgot_password(request.email)
+    # Always return success to prevent email enumeration
+    return {"success": True, "message": "If that email exists, an OTP has been sent."}
+
+@router.post("/verify-otp", response_model=BasicResponse)
+async def verify_otp(
+    request: VerifyOTPRequest,
+    db: Session = Depends(get_db)
+):
+    """Verify an OTP for a given email."""
+    service = PasswordResetService(db)
+    service.verify_otp(request.email, request.otp)
+    return {"success": True, "message": "OTP is valid."}
+
+@router.post("/reset-password", response_model=BasicResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """Reset the password using email, OTP, and new password."""
+    service = PasswordResetService(db)
+    service.reset_password(request.email, request.otp, request.new_password)
+    return {"success": True, "message": "Password has been successfully reset."}
