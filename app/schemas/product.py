@@ -140,8 +140,3 @@ class BundleResponse(BaseModel):
     message: str
     data: Optional[BundleOffer] = None
 
-
-class SuccessResponse(BaseModel):
-    """Generic success response."""
-    success: bool = True
-    message: str

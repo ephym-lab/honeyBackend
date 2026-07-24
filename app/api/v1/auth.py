@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, Register, Login,RegisterResponse
+from app.schemas.auth import TokenResponse, Register, Login,RegisterResponse
 from app.core.security import verify_password, create_access_token
 from app.config import settings
 from app.services.user_manager import RegisterService, LoginService
@@ -33,14 +33,12 @@ async def login(
 
 @router.post("/admin/login", response_model=TokenResponse)
 async def admin_login(
-    credentials: LoginRequest,
+    credentials: Login,
     db: Session = Depends(get_db)
 ):
     """Admin login (legacy endpoint)."""
-    # Convert LoginRequest to Login schema
-    login_data = Login(email=credentials.email, password=credentials.password)
     login_service = LoginService(db)
-    return login_service.login_user(login_data)
+    return login_service.login_user(credentials)
 
 from app.schemas.auth import ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest, BasicResponse
 from app.services.password_reset_service import PasswordResetService

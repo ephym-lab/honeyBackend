@@ -1,6 +1,15 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Literal
 from datetime import date, datetime
+from typing_extensions import Annotated
+
+
+# Define shared constrained types to avoid duplicating validation logic
+CustomerNameType = Annotated[str, Field(min_length=1)]
+PhoneType = Annotated[str, Field(pattern=r"^\+254[0-9]{9}$")]
+AddressType = Annotated[str, Field(min_length=1)]
+CityType = Annotated[str, Field(min_length=1)]
+CountyType = Annotated[str, Field(min_length=1)]
 
 
 class OrderItem(BaseModel):
@@ -15,27 +24,25 @@ class OrderItemResponse(BaseModel):
     price: int
 
 
-class OrderCreate(BaseModel):
-    customerName: str = Field(min_length=1)
-    email: EmailStr
-    phone: str = Field(pattern=r"^\+254[0-9]{9}$")
-    address: str = Field(min_length=1)
-    city: str = Field(min_length=1)
-    county: str = Field(min_length=1)
-    items: List[OrderItem] = Field(min_length=1)
-    paymentMethod: Literal["mpesa", "cash"]
-    mpesaPhone: Optional[str] = Field(None, pattern=r"^\+254[0-9]{9}$")
+class OrderBase(BaseModel):
+    customerName: CustomerNameType
+    phone: PhoneType
+    address: AddressType
+    city: CityType
+    county: CountyType
     orderNotes: Optional[str] = None
 
 
-class Order(BaseModel):
+class OrderCreate(OrderBase):
+    email: EmailStr
+    items: List[OrderItem] = Field(min_length=1)
+    paymentMethod: Literal["mpesa", "cash"]
+    mpesaPhone: Optional[PhoneType] = None
+
+
+class Order(OrderBase):
     id: str
-    customerName: str
     email: str
-    phone: str
-    address: str
-    city: str
-    county: str
     items: List[OrderItemResponse]
     subtotal: int
     shipping: int
@@ -45,7 +52,6 @@ class Order(BaseModel):
     mpesaTransactionId: Optional[str] = None
     status: str
     orderDate: date
-    orderNotes: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
     
@@ -67,11 +73,11 @@ class OrderListResponse(BaseModel):
 
 class OrderUpdate(BaseModel):
     """Schema for updating order details (only for pending orders)."""
-    customerName: Optional[str] = Field(None, min_length=1)
-    phone: Optional[str] = Field(None, pattern=r"^\+254[0-9]{9}$")
-    address: Optional[str] = Field(None, min_length=1)
-    city: Optional[str] = Field(None, min_length=1)
-    county: Optional[str] = Field(None, min_length=1)
+    customerName: Optional[CustomerNameType] = None
+    phone: Optional[PhoneType] = None
+    address: Optional[AddressType] = None
+    city: Optional[CityType] = None
+    county: Optional[CountyType] = None
     orderNotes: Optional[str] = None
 
 
@@ -86,9 +92,3 @@ class OrderTrackResponse(BaseModel):
     success: bool = True
     message: str
     data: Order
-
-
-class SuccessResponse(BaseModel):
-    """Generic success response."""
-    success: bool = True
-    message: str

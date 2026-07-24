@@ -9,9 +9,9 @@ from app.schemas.order import (
     OrderListResponse, 
     OrderUpdate, 
     OrderStatusUpdate, 
-    OrderTrackResponse, 
-    SuccessResponse
+    OrderTrackResponse
 )
+from app.schemas.common import SuccessResponse
 from app.services.order_service import OrderService
 
 router = APIRouter()
@@ -79,7 +79,7 @@ async def update_order(
 ):
     """Update order details (only for pending orders)."""
     order_service = OrderService(db)
-    return order_service.update_order(order_id, update_data)
+    return order_service.update_order(order_id, update_data.model_dump(exclude_unset=True))
 
 
 @router.patch("/{order_id}/status", response_model=OrderResponse)

@@ -15,11 +15,6 @@ class Login(BaseModel):
     password: str
 
 
-class LoginRequest(BaseModel):
-    """Legacy login request schema."""
-    email: EmailStr
-    password: str
-
 
 class UserResponse(BaseModel):
     id: str

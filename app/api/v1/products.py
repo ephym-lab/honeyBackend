@@ -14,9 +14,9 @@ from app.schemas.product import (
     StockUpdate,
     AvailabilityResponse,
     TopSellingResponse,
-    BundleResponse,
-    SuccessResponse
+    BundleResponse
 )
+from app.schemas.common import SuccessResponse
 from app.api.deps import get_current_admin
 from app.services.product_service import ProductService
 from app.services.file_service import upload_local_file
