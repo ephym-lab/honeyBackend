@@ -167,19 +167,7 @@ GET /v1/products?category=HIVES&in_stock=true&page=1&limit=20
         "price": 1500,
         "image_cover": "https://example.com/image.jpg",
         "category": "HIVES",
-                "stock": 50,
-        "rating": 4.5,
-        "tags": ["100% Pure", "Locally Sourced"],
-        "images": ["url1", "url2"],
-                "features": ["Weather resistant", "Includes super"],
-                "related_products": ["uuid1", "uuid2"],
-        "bundle_offer": {
-          "quantity": 3,
-          "discount": 15,
-          "description": "Buy 3, get 15% off"
-        },
-        "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z"
+        "stock": 50
       }
     ],
     "pagination": {

@@ -24,8 +24,11 @@ class ProductBase(BaseModel):
     bundle_offer: Optional[BundleOffer] = None
 
 
+
 class ProductCreate(ProductBase):
     pass
+
+
 
 
 class ProductUpdate(BaseModel):
@@ -59,8 +62,21 @@ class Pagination(BaseModel):
     totalPages: int
 
 
+class ProductListItem(BaseModel):
+    id: UUID
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[int] = None
+    image_cover: Optional[str] = None
+    category: Optional[str] = None
+    stock: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
 class ProductListData(BaseModel):
-    products: List[Product]
+    products: List[ProductListItem]
     pagination: Pagination
 
 
