@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
+from app.schemas.review import Review
 
 
 class BundleOffer(BaseModel):
@@ -50,6 +51,7 @@ class Product(ProductBase):
     rating: float
     created_at: datetime
     updated_at: datetime
+    reviews: Optional[List[Review]] = []
 
     class Config:
         from_attributes = True  # REQUIRED for ORM

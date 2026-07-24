@@ -92,10 +92,18 @@ class ProductService(ProductManagerService):
                     detail="Product not found"
                 )
 
+            from app.models.review import Review as ReviewModel
+            from app.schemas.product import Product as ProductSchema
+            
+            reviews = self.db.query(ReviewModel).filter(ReviewModel.product_id == product_id).limit(3).all()
+            
+            product_data = ProductSchema.model_validate(product).model_dump()
+            product_data["reviews"] = reviews
+
             return {
                 "success": True,
-                "data": product,
-                "message":"Product retrieved successfully"
+                "data": product_data,
+                "message": "Product retrieved successfully"
             }
 
         except Exception as e:

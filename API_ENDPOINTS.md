@@ -305,6 +305,18 @@ GET /v1/products/123e4567-e89b-12d3-a456-426614174000
       "discount": 15,
       "description": "Buy 3, get 15% off"
     },
+    "reviews": [
+      {
+        "id": "uuid-string",
+        "product_id": "123e4567-e89b-12d3-a456-426614174000",
+        "author": "Jane Doe",
+        "rating": 5,
+        "comment": "Great product!",
+        "date": "2024-01-02",
+        "verified": true,
+        "created_at": "2024-01-02T12:00:00Z"
+      }
+    ],
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z"
   },
