@@ -25,8 +25,7 @@ class ProductService(ProductManagerService):
     
     def get_products(
         self,
-        scent: Optional[str] = None,
-        size: Optional[str] = None,
+        category: Optional[str] = None,
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
         in_stock: Optional[bool] = None,
@@ -37,10 +36,8 @@ class ProductService(ProductManagerService):
         try:
             query = self.db.query(Products)
 
-            if scent and scent != "All":
-                query = query.filter(Products.scent == scent)
-            if size and size != "All":
-                query = query.filter(Products.size == size)
+            if category and category != "All":
+                query = query.filter(Products.category == category)
             if min_price is not None:
                 if min_price < 0:
                     raise HTTPException(
@@ -414,7 +411,7 @@ class ProductService(ProductManagerService):
             
             # Update stock
             old_stock = product.stock
-            product.stock = stock_data.stock
+            product.stock = stock_data.stock #pyrefly: ignore [missing-attribute]
             
             self.db.commit()
             self.db.refresh(product)
@@ -487,10 +484,9 @@ class ProductService(ProductManagerService):
                         "description": product.description,
                         "price": product.price,
                         "image_cover": product.image_cover,
-                        "scent": product.scent,
-                        "size": product.size,
+                        "category": product.category,
                         "stock": product.stock,
-                        "rating": float(product.rating) if product.rating else 0.0,
+                        "rating": float(product.rating) if product.rating else 0.0,  # type: ignore
                         "total_sold": sales['total_sold'],
                         "revenue": sales['revenue']
                     })

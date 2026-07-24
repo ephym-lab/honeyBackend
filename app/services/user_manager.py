@@ -116,7 +116,7 @@ class LoginService(UserManagerService):
         # Find user by email
         user = self.db.query(User).filter(User.email == user_data.email).first()
         
-        if not user or not verify_password(user_data.password, user.password_hash):
+        if not user or not verify_password(user_data.password, str(user.password_hash)):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"

@@ -4,7 +4,6 @@ from typing import Optional, List
 from uuid import UUID
 import tempfile
 import os
-
 from app.database import get_db
 from app.schemas.product import (
     ProductCreate, 
@@ -24,11 +23,20 @@ from app.services.file_service import upload_local_file
 
 router = APIRouter()
 
+def parse_json_field(field_val: Optional[str], field_name: str):
+    if not field_val or not field_val.strip():
+        return None
+    try:
+        import json
+        return json.loads(field_val)
+    # pyrefly: ignore [unbound-name]
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format for {field_name}")
+
 
 @router.get("", response_model=ProductListResponse)
 async def get_products(
-    scent: Optional[str] = None,
-    size: Optional[str] = None,
+    category: Optional[str] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
     in_stock: Optional[bool] = None,
@@ -38,8 +46,7 @@ async def get_products(
 ):
     product_service = ProductService(db)
     return product_service.get_products(
-        scent=scent,
-        size=size,
+        category=category,
         min_price=min_price,
         max_price=max_price,
         in_stock=in_stock,
@@ -117,7 +124,7 @@ async def update_product_stock(
 ):
     """Update product stock (Admin only)."""
     product_service = ProductService(db)
-    return product_service.update_stock(product_id, stock_data)
+    return product_service.update_stock(product_id, stock_data.model_dump(exclude_unset=True))
 
 
 @router.post("", response_model=ProductResponse)
@@ -125,15 +132,12 @@ async def create_product(
     name: str = Form(...),
     description: str = Form(...),
     price: int = Form(...),
-    scent: str = Form(...),
-    size: str = Form(...),
+    category: str = Form(...),
     stock: int = Form(...),
     image_cover: UploadFile = File(..., description="Main product image (required)"),
     additional_images: Optional[List[UploadFile]] = File(None, description="Additional product images (max 2)"),
-    scent_description: Optional[str] = Form(None),
-    burn_time: Optional[int] = Form(None),
-    care_instructions: Optional[str] = Form(None),  # JSON string
-    ingredients: Optional[str] = Form(None),  # JSON string
+    tags: Optional[str] = Form(None),  # JSON string
+    features: Optional[str] = Form(None),  # JSON string
     related_products: Optional[str] = Form(None),  # JSON string
     bundle_offer: Optional[str] = Form(None),  # JSON string
     db: Session = Depends(get_db),
@@ -161,7 +165,7 @@ async def create_product(
             )
     
     # Upload main image
-    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_cover.filename)[1]) as tmp_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_cover.filename or "")[1]) as tmp_file:
         content = await image_cover.read()
         tmp_file.write(content)
         tmp_file_path = tmp_file.name
@@ -169,7 +173,7 @@ async def create_product(
     try:
         main_image_url = upload_local_file(
             file_path=tmp_file_path,
-            filename=image_cover.filename,
+            filename=image_cover.filename or "",
             file_type='images'
         )
     finally:
@@ -180,7 +184,7 @@ async def create_product(
     additional_image_urls = []
     if additional_images:
         for idx, img in enumerate(additional_images):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(img.filename)[1]) as tmp_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(img.filename or "")[1]) as tmp_file:
                 content = await img.read()
                 tmp_file.write(content)
                 tmp_file_path = tmp_file.name
@@ -188,7 +192,7 @@ async def create_product(
             try:
                 img_url = upload_local_file(
                     file_path=tmp_file_path,
-                    filename=img.filename,
+                    filename=img.filename or "",
                     file_type='images'
                 )
                 additional_image_urls.append(img_url)
@@ -197,10 +201,10 @@ async def create_product(
                     os.remove(tmp_file_path)
     
     # Parse JSON strings
-    care_instructions_list = json.loads(care_instructions) if care_instructions else None
-    ingredients_list = json.loads(ingredients) if ingredients else None
-    related_products_list = json.loads(related_products) if related_products else None
-    bundle_offer_dict = json.loads(bundle_offer) if bundle_offer else None
+    tags_list = parse_json_field(tags, "tags")
+    features_list = parse_json_field(features, "features")
+    related_products_list = parse_json_field(related_products, "related_products")
+    bundle_offer_dict = parse_json_field(bundle_offer, "bundle_offer")
     
     # Create ProductCreate object
     product_data = ProductCreate(
@@ -208,14 +212,11 @@ async def create_product(
         description=description,
         price=price,
         image_cover=main_image_url,
-        scent=scent,
-        size=size,
+        category=category,
         stock=stock,
-        scent_description=scent_description,
         images=additional_image_urls if additional_image_urls else None,
-        burn_time=burn_time,
-        care_instructions=care_instructions_list,
-        ingredients=ingredients_list,
+        tags=tags_list,
+        features=features_list,
         related_products=related_products_list,
         bundle_offer=bundle_offer_dict
     )
@@ -230,15 +231,12 @@ async def update_product(
     name: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     price: Optional[int] = Form(None),
-    scent: Optional[str] = Form(None),
-    size: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
     stock: Optional[int] = Form(None),
     image_cover: Optional[UploadFile] = File(None, description="New main product image"),
     additional_images: Optional[List[UploadFile]] = File(None, description="New additional images (max 2)"),
-    scent_description: Optional[str] = Form(None),
-    burn_time: Optional[int] = Form(None),
-    care_instructions: Optional[str] = Form(None),  # JSON string
-    ingredients: Optional[str] = Form(None),  # JSON string
+    tags: Optional[str] = Form(None),  # JSON string
+    features: Optional[str] = Form(None),  # JSON string
     related_products: Optional[str] = Form(None),  # JSON string
     bundle_offer: Optional[str] = Form(None),  # JSON string
     db: Session = Depends(get_db),
@@ -267,7 +265,7 @@ async def update_product(
     # Upload main image if provided
     main_image_url = None
     if image_cover:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_cover.filename)[1]) as tmp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image_cover.filename or "")[1]) as tmp_file:
             content = await image_cover.read()
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
@@ -275,7 +273,7 @@ async def update_product(
         try:
             main_image_url = upload_local_file(
                 file_path=tmp_file_path,
-                filename=image_cover.filename,
+                filename=image_cover.filename or "",
                 file_type='images'
             )
         finally:
@@ -293,7 +291,7 @@ async def update_product(
         
         additional_image_urls = []
         for idx, img in enumerate(additional_images):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(img.filename)[1]) as tmp_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(img.filename or "")[1]) as tmp_file:
                 content = await img.read()
                 tmp_file.write(content)
                 tmp_file_path = tmp_file.name
@@ -301,7 +299,7 @@ async def update_product(
             try:
                 img_url = upload_local_file(
                     file_path=tmp_file_path,
-                    filename=img.filename,
+                    filename=img.filename or "",
                     file_type='images'
                 )
                 additional_image_urls.append(img_url)
@@ -310,10 +308,10 @@ async def update_product(
                     os.remove(tmp_file_path)
     
     # Parse JSON strings
-    care_instructions_list = json.loads(care_instructions) if care_instructions else None
-    ingredients_list = json.loads(ingredients) if ingredients else None
-    related_products_list = json.loads(related_products) if related_products else None
-    bundle_offer_dict = json.loads(bundle_offer) if bundle_offer else None
+    tags_list = parse_json_field(tags, "tags")
+    features_list = parse_json_field(features, "features")
+    related_products_list = parse_json_field(related_products, "related_products")
+    bundle_offer_dict = parse_json_field(bundle_offer, "bundle_offer")
     
     # Build update data dictionary - only include fields that are provided
     update_dict = {}
@@ -323,20 +321,14 @@ async def update_product(
         update_dict['description'] = description
     if price is not None:
         update_dict['price'] = price
-    if scent is not None:
-        update_dict['scent'] = scent
-    if size is not None:
-        update_dict['size'] = size
+    if category is not None:
+        update_dict['category'] = category
     if stock is not None:
         update_dict['stock'] = stock
-    if scent_description is not None:
-        update_dict['scent_description'] = scent_description
-    if burn_time is not None:
-        update_dict['burn_time'] = burn_time
-    if care_instructions_list is not None:
-        update_dict['care_instructions'] = care_instructions_list
-    if ingredients_list is not None:
-        update_dict['ingredients'] = ingredients_list
+    if tags_list is not None:
+        update_dict['tags'] = tags_list
+    if features_list is not None:
+        update_dict['features'] = features_list
     if related_products_list is not None:
         update_dict['related_products'] = related_products_list
     if bundle_offer_dict is not None:

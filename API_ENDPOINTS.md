@@ -151,7 +151,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```
-GET /v1/products?scent=lavender&in_stock=true&page=1&limit=20
+GET /v1/products?category=HIVES&in_stock=true&page=1&limit=20
 ```
 
 **Response Body (Success - 200):**

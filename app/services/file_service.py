@@ -65,10 +65,10 @@ def delete_local_file(file_url: str) -> bool:
 
 # Keep these names for compatibility with some existing code if needed, 
 # but route them to the local functions or raise errors.
-def upload_file_to_supabase(file_path: str, filename: str, file_type: str, bucket_name: str = None) -> str:
+def upload_file_to_supabase(file_path: str, filename: str, file_type: str, bucket_name: str = "") -> str:
     return upload_local_file(file_path, filename, file_type)
 
-def delete_file_from_supabase(file_name: str, file_type: str, bucket_name: str = None) -> bool:
+def delete_file_from_supabase(file_name: str, file_type: str, bucket_name: str = "") -> bool:
     # Notice that we used to pass just the filename and type. 
     # With local files, it's easier to just pass the full URL path to delete_local_file.
     # We will update product_service.py to just use delete_local_file directly.
