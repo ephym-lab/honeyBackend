@@ -34,6 +34,10 @@ class NotificationService:
         """Get notifications, optionally filtering by unread."""
         try:
             query = self.db.query(Notification)
+            
+            total_count = self.db.query(Notification).count()
+            unread_count = self.db.query(Notification).filter(Notification.is_read == False).count()
+            
             if unread_only:
                 query = query.filter(Notification.is_read == False)
             
@@ -41,7 +45,11 @@ class NotificationService:
             return {
                 "success": True,
                 "message": "Notifications retrieved successfully",
-                "data": notifications
+                "data": {
+                    "notifications": notifications,
+                    "total_count": total_count,
+                    "unread_count": unread_count
+                }
             }
         except Exception as e:
             raise HTTPException(

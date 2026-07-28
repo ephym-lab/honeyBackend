@@ -1302,21 +1302,25 @@ GET /v1/notifications?unread_only=true
 {
   "success": true,
   "message": "Notifications retrieved successfully",
-  "data": [
-    {
-      "id": "uuid-string",
-      "title": "New Order Received",
-      "message": "Order ORD-20240101-ABCD has been placed.",
-      "notification_type": "new_order",
-      "priority": "medium",
-      "related_entity": "Order",
-      "related_id": "ORD-20240101-ABCD",
-      "is_read": false,
-      "read_at": null,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  ]
+  "data": {
+    "notifications": [
+      {
+        "id": "uuid-string",
+        "title": "New Order Received",
+        "message": "Order ORD-20240101-ABCD has been placed.",
+        "notification_type": "new_order",
+        "priority": "medium",
+        "related_entity": "Order",
+        "related_id": "ORD-20240101-ABCD",
+        "is_read": false,
+        "read_at": null,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z"
+      }
+    ],
+    "total_count": 1,
+    "unread_count": 1
+  }
 }
 ```
 

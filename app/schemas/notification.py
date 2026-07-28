@@ -23,7 +23,12 @@ class NotificationResponse(NotificationBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class NotificationListData(BaseModel):
+    notifications: List[NotificationResponse]
+    total_count: int
+    unread_count: int
+
 class NotificationListResponse(BaseModel):
     success: bool = True
-    data: List[NotificationResponse]
+    data: NotificationListData
     message: str = "Notifications retrieved successfully"
