@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import settings
-from app.api.v1 import products, orders, reviews, auth, analytics, newsletter, webhooks
+from app.api.v1 import products, orders, reviews, auth, analytics, newsletter, webhooks, notifications
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -30,6 +30,7 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["
 app.include_router(analytics.router, prefix=f"{settings.API_V1_PREFIX}/analytics", tags=["analytics"])
 app.include_router(newsletter.router, prefix=f"{settings.API_V1_PREFIX}/newsletter", tags=["newsletter"])
 app.include_router(webhooks.router, prefix=f"{settings.API_V1_PREFIX}/webhooks", tags=["webhooks"])
+app.include_router(notifications.router, prefix=f"{settings.API_V1_PREFIX}/notifications", tags=["notifications"])
 
 # Ensure uploads directory exists and mount it
 uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")

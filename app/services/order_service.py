@@ -12,6 +12,7 @@ from app.models.order import Order
 from app.models.product import Products
 from app.services.email_service import EmailService
 from app.services.email_templates import EmailTemplates
+from app.services.notification_service import NotificationService
 
 
 class OrderManagerService(ABC):
@@ -233,6 +234,20 @@ class OrderService(OrderManagerService):
             except Exception as e:
                 print(f"Order created but admin notification failed: {str(e)}")
 
+            # Create in-app notification for the frontend dashboard
+            try:
+                notification_service = NotificationService(self.db)
+                title = "New Order Received"
+                message = f"Customer {new_order.customer_name} placed an order for KES {new_order.total:,.2f}"
+                notification_service.create_notification(
+                    title=title,
+                    message=message,
+                    notification_type="new_order",
+                    related_entity="Order",
+                    related_id=new_order.id # pyrefly: ignore [bad-argument-type]
+                )
+            except Exception as e:
+                print(f"Failed to create in-app notification: {str(e)}")
             
             return {
                 "success": True,
