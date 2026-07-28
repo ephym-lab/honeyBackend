@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from datetime import date
 from typing import Optional
 import uuid
+import os
 
 from app.models import order
 from app.schemas.order import OrderCreate, OrderItemResponse
@@ -94,8 +95,41 @@ class OrderService(OrderManagerService):
         except Exception as e:
             print(f"Failed to send order status email: {str(e)}")
 
-
-
+    def _send_admin_order_notification(self, order: Order):
+        """
+        Send HTML order notification email to admin
+        """
+        try:
+            html_body = EmailTemplates.admin_order_notification(
+                # pyrefly: ignore [bad-argument-type]
+                customer_name=order.customer_name,
+                # pyrefly: ignore [bad-argument-type]
+                order_id=order.id,
+                order_date=str(order.order_date),
+                # pyrefly: ignore [bad-argument-type]
+                items=order.items,
+                # pyrefly: ignore [bad-argument-type]
+                subtotal=order.subtotal,
+                # pyrefly: ignore [bad-argument-type]
+                shipping=order.shipping,
+                # pyrefly: ignore [bad-argument-type]
+                total=order.total,
+                # pyrefly: ignore [bad-argument-type]
+                payment_method=order.payment_method,
+                # pyrefly: ignore [bad-argument-type]
+                address=order.address,
+                # pyrefly: ignore [bad-argument-type]
+                city=order.city,
+                # pyrefly: ignore [bad-argument-type]
+                county=order.county
+            )
+            
+            admin_email = os.getenv("ADMIN_EMAIL", self.email_service.from_email)
+            subject = f"New Order Received - {order.id}"
+            self.email_service.send_html_email(admin_email, subject, html_body)
+            print(f"Admin order notification email sent to {admin_email}")
+        except Exception as e:
+            print(f"Failed to send admin order notification email: {str(e)}")
 
     
     def create_order(self, order_data: OrderCreate):
@@ -193,6 +227,11 @@ class OrderService(OrderManagerService):
             except Exception as e:
                 print(f"Order created but email failed: {str(e)}")
 
+            # Send admin notification (non-blocking)
+            try:
+                self._send_admin_order_notification(order=new_order)
+            except Exception as e:
+                print(f"Order created but admin notification failed: {str(e)}")
 
             
             return {

@@ -535,3 +535,105 @@ class EmailTemplates:
         
         preheader = "You've been unsubscribed from HoneyBiz newsletter."
         return EmailTemplates._base_template(content, preheader)
+
+    @staticmethod
+    def admin_order_notification(
+        customer_name: str,
+        order_id: str,
+        order_date: str,
+        items: List[Dict],
+        subtotal: float,
+        shipping: float,
+        total: float,
+        payment_method: str,
+        address: str,
+        city: str,
+        county: str
+    ) -> str:
+        """
+        Admin notification email template for new orders
+        
+        Args:
+            customer_name: Customer's name
+            order_id: Order ID
+            order_date: Order date
+            items: List of order items
+            subtotal: Subtotal amount
+            shipping: Shipping cost
+            total: Total amount
+            payment_method: Payment method
+            address: Delivery address
+            city: City
+            county: County
+            
+        Returns:
+            HTML email content
+        """
+        # Build items HTML
+        items_html = ""
+        for item in items:
+            items_html += f"""
+            <div class="order-item">
+                <div class="order-item-name">{item['productName']}</div>
+                <div class="order-item-details">
+                    Quantity: {item['quantity']} × KES {item['price']:,.2f} = KES {(item['quantity'] * item['price']):,.2f}
+                </div>
+            </div>
+            """
+        
+        # Payment method display
+        payment_display = payment_method.upper().replace("_", " ")
+        
+        content = f"""
+        <div class="content">
+            <h2>🚨 New Order Received!</h2>
+            <p>A new order has been placed by <strong>{customer_name}</strong>.</p>
+            
+            <div class="info-box">
+                <strong>Order ID:</strong> {order_id}<br>
+                <strong>Order Date:</strong> {order_date}<br>
+                <strong>Status:</strong> <span class="status-badge status-pending">Pending</span>
+            </div>
+            
+            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Order Summary</h3>
+            <div class="order-summary">
+                {items_html}
+                
+                <div style="margin-top: 20px;">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>KES {subtotal:,.2f}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Shipping:</span>
+                        <span>KES {shipping:,.2f}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Total:</span>
+                        <span>KES {total:,.2f}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Customer Details</h3>
+            <div class="info-box">
+                <strong>Address:</strong> {address}<br>
+                <strong>City:</strong> {city}<br>
+                <strong>County:</strong> {county}<br>
+                <strong>Payment Method:</strong> {payment_display}
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="button">View Order in Dashboard</a>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="color: #6c757d; font-size: 14px;">
+                Please ensure this order is processed promptly.
+            </p>
+        </div>
+        """
+        
+        preheader = f"New order {order_id} received from {customer_name}."
+        return EmailTemplates._base_template(content, preheader)
