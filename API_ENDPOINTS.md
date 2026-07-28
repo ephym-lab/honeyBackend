@@ -14,6 +14,7 @@ This document provides comprehensive information about all available API endpoin
 4. [Reviews](#reviews)
 5. [Newsletter](#newsletter)
 6. [Analytics](#analytics)
+7. [Notifications](#notifications)
 8. [Health Check](#health-check)
 
 ---
@@ -1268,6 +1269,113 @@ Content-Type: application/json
   "error": {
     "code": "NOT_IMPLEMENTED",
     "message": "Analytics not yet implemented. See FASTAPI_ROUTES_EXAMPLES.md for implementation."
+  }
+}
+```
+
+---
+
+## Notifications
+
+### 1. Get All Notifications (Admin Only)
+
+**Endpoint:** `GET /v1/notifications`
+
+**Description:** Get all notifications with an option to filter by unread only. Requires admin authentication.
+
+**Request Headers:**
+```text
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**Query Parameters:**
+- `unread_only` (optional, default: true): Filter by unread status.
+
+**Example Request:**
+```text
+GET /v1/notifications?unread_only=true
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Notifications retrieved successfully",
+  "data": [
+    {
+      "id": "uuid-string",
+      "title": "New Order Received",
+      "message": "Order ORD-20240101-ABCD has been placed.",
+      "notification_type": "new_order",
+      "priority": "medium",
+      "related_entity": "Order",
+      "related_id": "ORD-20240101-ABCD",
+      "is_read": false,
+      "read_at": null,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 2. Mark All Notifications as Read (Admin Only)
+
+**Endpoint:** `PATCH /v1/notifications/read-all`
+
+**Description:** Mark all unread notifications as read. Requires admin authentication.
+
+**Request Headers:**
+```text
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "All notifications marked as read"
+}
+```
+
+---
+
+### 3. Mark Notification as Read (Admin Only)
+
+**Endpoint:** `PATCH /v1/notifications/{notification_id}/read`
+
+**Description:** Mark a specific notification as read. Requires admin authentication.
+
+**Request Headers:**
+```text
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**Path Parameters:**
+- `notification_id` (required): UUID of the notification
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Notification marked as read",
+  "data": {
+    "id": "uuid-string",
+    "title": "New Order Received",
+    "message": "Order ORD-20240101-ABCD has been placed.",
+    "notification_type": "new_order",
+    "priority": "medium",
+    "related_entity": "Order",
+    "related_id": "ORD-20240101-ABCD",
+    "is_read": true,
+    "read_at": "2024-01-01T01:00:00Z",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T01:00:00Z"
   }
 }
 ```
