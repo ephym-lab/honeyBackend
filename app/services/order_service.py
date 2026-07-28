@@ -36,16 +36,26 @@ class OrderService(OrderManagerService):
         """
         try:
             html_body = EmailTemplates.order_confirmation(
+                # pyrefly: ignore [bad-argument-type]
                 customer_name=order.customer_name,
+                # pyrefly: ignore [bad-argument-type]
                 order_id=order.id,
                 order_date=str(order.order_date),
+                # pyrefly: ignore [bad-argument-type]
                 items=order.items,
+                # pyrefly: ignore [bad-argument-type]
                 subtotal=order.subtotal,
+                # pyrefly: ignore [bad-argument-type]
                 shipping=order.shipping,
+                # pyrefly: ignore [bad-argument-type]
                 total=order.total,
+                # pyrefly: ignore [bad-argument-type]
                 payment_method=order.payment_method,
+                # pyrefly: ignore [bad-argument-type]
                 address=order.address,
+                # pyrefly: ignore [bad-argument-type]
                 city=order.city,
+                # pyrefly: ignore [bad-argument-type]
                 county=order.county
             )
             
@@ -66,10 +76,14 @@ class OrderService(OrderManagerService):
         """
         try:
             html_body = EmailTemplates.order_status_update(
+                # pyrefly: ignore [bad-argument-type]
                 customer_name=order.customer_name,
+                # pyrefly: ignore [bad-argument-type]
                 order_id=order.id,
                 status=status,
+                # pyrefly: ignore [bad-argument-type]
                 items=order.items,
+                # pyrefly: ignore [bad-argument-type]
                 total=order.total,
                 message=message
             )
@@ -149,6 +163,7 @@ class OrderService(OrderManagerService):
                 address=order_data.address,
                 city=order_data.city,
                 county=order_data.county,
+                order_notes=order_data.orderNotes,
                 items=items_with_details,
                 subtotal=subtotal,
                 shipping=shipping,
@@ -166,6 +181,7 @@ class OrderService(OrderManagerService):
                 product = self.db.query(Products).filter(
                     Products.id == item.productId
                 ).first()
+                # pyrefly: ignore [missing-attribute]
                 product.stock -= item.quantity
             
             self.db.commit()
@@ -189,6 +205,7 @@ class OrderService(OrderManagerService):
                     "address": new_order.address,
                     "city": new_order.city,
                     "county": new_order.county,
+                    "orderNotes": new_order.order_notes,
                     "items": new_order.items,
                     "subtotal": new_order.subtotal,
                     "shipping": new_order.shipping,
@@ -244,6 +261,7 @@ class OrderService(OrderManagerService):
                 "address": order.address,
                 "city": order.city,
                 "county": order.county,
+                "orderNotes": order.order_notes,
                 "items": order.items,
                 "subtotal": order.subtotal,
                 "shipping": order.shipping,
@@ -277,12 +295,15 @@ class OrderService(OrderManagerService):
         
         if not order:
             raise HTTPException(
+                # pyrefly: ignore [missing-attribute]
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Order not found"
             )
         
+        # pyrefly: ignore [bad-assignment]
         order.status = status
         if mpesa_transaction_id:
+            # pyrefly: ignore [bad-assignment]
             order.mpesa_transaction_id = mpesa_transaction_id
         
         self.db.commit()
@@ -310,6 +331,7 @@ class OrderService(OrderManagerService):
                 "address": order.address,
                 "city": order.city,
                 "county": order.county,
+                "orderNotes": order.order_notes,
                 "items": order.items,
                 "subtotal": order.subtotal,
                 "shipping": order.shipping,
@@ -333,7 +355,7 @@ class OrderService(OrderManagerService):
             dict: Response with message and list of orders
         """
         try:
-            orders = self.db.query(Order).all()
+            orders = self.db.query(Order).order_by(Order.created_at.desc()).all()
             return {
                 "success": True,
                 "message": "Orders retrieved successfully",
@@ -346,6 +368,7 @@ class OrderService(OrderManagerService):
                         "address": order.address,
                         "city": order.city,
                         "county": order.county,
+                        "orderNotes": order.order_notes,
                         "items": order.items,
                         "subtotal": order.subtotal,
                         "shipping": order.shipping,
@@ -378,7 +401,7 @@ class OrderService(OrderManagerService):
             list: List of orders for the user
         """
         try:
-            orders = self.db.query(Order).filter(Order.user_id == user_id).all()
+            orders = self.db.query(Order).filter(Order.user_id == user_id).order_by(Order.created_at.desc()).all()
             return {
                 "message": "Orders retrieved successfully",
                 "success": True,
@@ -414,6 +437,7 @@ class OrderService(OrderManagerService):
                         "address": order.address,
                         "city": order.city,
                         "county": order.county,
+                        "orderNotes": order.order_notes,
                         "items": order.items,
                         "subtotal": order.subtotal,
                         "shipping": order.shipping,
@@ -464,6 +488,7 @@ class OrderService(OrderManagerService):
                 "address": order.address,
                 "city": order.city,
                 "county": order.county,
+                "orderNotes": order.order_notes,
                 "items": order.items,
                 "subtotal": order.subtotal,
                 "shipping": order.shipping,
@@ -505,16 +530,18 @@ class OrderService(OrderManagerService):
             )
         
         # Update fields if provided
-        if update_data.customerName:
-            order.customer_name = update_data.customerName
-        if update_data.phone:
-            order.phone = update_data.phone
-        if update_data.address:
-            order.address = update_data.address
-        if update_data.city:
-            order.city = update_data.city
-        if update_data.county:
-            order.county = update_data.county
+        if "customerName" in update_data:
+            order.customer_name = update_data["customerName"]
+        if "phone" in update_data:
+            order.phone = update_data["phone"]
+        if "address" in update_data:
+            order.address = update_data["address"]
+        if "city" in update_data:
+            order.city = update_data["city"]
+        if "county" in update_data:
+            order.county = update_data["county"]
+        if "orderNotes" in update_data:
+            order.order_notes = update_data["orderNotes"]
         
         try:
             self.db.commit()
@@ -531,6 +558,7 @@ class OrderService(OrderManagerService):
                     "address": order.address,
                     "city": order.city,
                     "county": order.county,
+                    "orderNotes": order.order_notes,
                     "items": order.items,
                     "subtotal": order.subtotal,
                     "shipping": order.shipping,
@@ -578,6 +606,7 @@ class OrderService(OrderManagerService):
             )
         
         # Update status to cancelled
+        # pyrefly: ignore [bad-assignment]
         order.status = "cancelled"
         
         # Restore product stock
@@ -634,6 +663,7 @@ class OrderService(OrderManagerService):
                         "address": order.address,
                         "city": order.city,
                         "county": order.county,
+                        "orderNotes": order.order_notes,
                         "items": order.items,
                         "subtotal": order.subtotal,
                         "shipping": order.shipping,

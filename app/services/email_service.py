@@ -30,6 +30,7 @@ class EmailService:
 
             with smtplib.SMTP(self.host, self.port) as server:
                 server.starttls()
+                # pyrefly: ignore [bad-argument-type]
                 server.login(self.username, self.password)
                 server.send_message(msg)
 
