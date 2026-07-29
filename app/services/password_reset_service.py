@@ -37,13 +37,23 @@ class PasswordResetService:
         self.db.add(reset_record)
         self.db.commit()
         
-        # Simulate sending email (in a real app, integrate SMTP/SendGrid here)
-        print(f"\n{'='*40}")
-        print(f"PASSWORD RESET EMAIL FOR: {email}")
-        print(f"YOUR OTP IS: {otp}")
-        print(f"EXPIRES AT: {expires_at} UTC")
-        print(f"{'='*40}\n")
-
+        # Send actual email
+        from app.services.email_service import EmailService
+        from app.services.email_templates import EmailTemplates
+        
+        email_service = EmailService()
+        customer_name = user.full_name or "Valued Customer"
+        html_body = EmailTemplates.password_reset_otp(
+            customer_name=customer_name,#type:ignore
+            otp=otp,
+            expires_in_minutes=10
+        )
+        
+        email_service.send_html_email(
+            to_email=email,
+            subject="Your Password Reset Code",
+            html_body=html_body
+        )
     def verify_otp(self, email: str, otp: str) -> bool:
         """Verify if an OTP is valid for the given email."""
         reset_record = self.db.query(PasswordReset).filter(

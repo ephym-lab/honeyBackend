@@ -16,6 +16,7 @@ This document provides comprehensive information about all available API endpoin
 6. [Analytics](#analytics)
 7. [Notifications](#notifications)
 8. [Health Check](#health-check)
+9. [Customer Requests](#customer-requests)
 
 ---
 
@@ -124,6 +125,93 @@ Content-Type: application/json
       "role": "admin"
     }
   }
+}
+```
+
+---
+
+### 4. Forgot Password
+
+**Endpoint:** `POST /v1/auth/forgot-password`
+
+**Description:** Request a password reset OTP for a given email address.
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "If that email exists, an OTP has been sent."
+}
+```
+
+---
+
+### 5. Verify OTP
+
+**Endpoint:** `POST /v1/auth/verify-otp`
+
+**Description:** Verify that the provided OTP is valid for the given email address.
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "OTP is valid."
+}
+```
+
+---
+
+### 6. Reset Password
+
+**Endpoint:** `POST /v1/auth/reset-password`
+
+**Description:** Reset the password using the email, OTP, and new password.
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456",
+  "new_password": "newSecurePassword123"
+}
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Password has been successfully reset."
 }
 ```
 
@@ -1466,6 +1554,150 @@ Authorization: Bearer <your_jwt_token>
 ```
 
 To obtain a token, use the `/v1/auth/login` or `/v1/auth/admin/login` endpoint.
+
+---
+
+## Customer Requests
+
+### 1. Create Request
+
+**Endpoint:** `POST /v1/requests`
+
+**Description:** Submit a new customer request (Contact page).
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "email": "johndoe@example.com",
+  "phone": "+254700000000",
+  "reason": "Training Request",
+  "training_type": "Beginner Beekeeping",
+  "participants": 2,
+  "preferred_date": "2026-08-15",
+  "location": "Nairobi",
+  "message": "We would like to book a training session."
+}
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Request submitted successfully",
+  "data": {
+    "id": "uuid-string",
+    "name": "John Doe",
+    "email": "johndoe@example.com",
+    "reason": "Training Request",
+    "message": "We would like to book a training session.",
+    "status": "New",
+    "created_at": "2026-07-29T10:00:00Z",
+    "updated_at": "2026-07-29T10:00:00Z"
+  }
+}
+```
+
+---
+
+### 2. Get All Requests
+
+**Endpoint:** `GET /v1/requests`
+
+**Description:** Retrieve all customer requests. Can filter by category.
+
+**Query Parameters:**
+- `reason` (optional): Filter by request category (e.g., `Training Request`).
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-string",
+      "name": "John Doe",
+      "email": "johndoe@example.com",
+      "reason": "Training Request",
+      "message": "We would like to book a training session.",
+      "status": "New",
+      "created_at": "2026-07-29T10:00:00Z",
+      "updated_at": "2026-07-29T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 3. Get Single Request
+
+**Endpoint:** `GET /v1/requests/{request_id}`
+
+**Description:** Retrieve details of a specific request.
+
+---
+
+### 4. Update Request Status
+
+**Endpoint:** `PATCH /v1/requests/{request_id}/status`
+
+**Description:** Update the status of a request (Admin only).
+
+**Request Body:**
+```json
+{
+  "status": "Contacted"
+}
+```
+
+---
+
+### 5. Delete Request
+
+**Endpoint:** `DELETE /v1/requests/{request_id}`
+
+**Description:** Delete a specific customer request (Admin only).
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Request deleted successfully"
+}
+```
+
+---
+
+### 6. Get Request Statistics
+
+**Endpoint:** `GET /v1/requests/stats`
+
+**Description:** Get aggregate statistics for the dashboard.
+
+**Response Body:**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 21,
+    "training_requests": 10,
+    "general_inquiries": 5,
+    "bulk_order_quotes": 3,
+    "product_support": 2,
+    "other_inquiries": 1,
+    "new": 12,
+    "contacted": 4,
+    "in_progress": 3,
+    "completed": 2
+  }
+}
+```
 
 ---
 

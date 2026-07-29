@@ -637,3 +637,32 @@ class EmailTemplates:
         
         preheader = f"New order {order_id} received from {customer_name}."
         return EmailTemplates._base_template(content, preheader)
+
+    @staticmethod
+    def password_reset_otp(customer_name: str, otp: str, expires_in_minutes: int) -> str:
+        """
+        Template for password reset OTP.
+        """
+        content = f"""
+        <div class="content">
+            <h2>Password Reset Request</h2>
+            
+            <p>Hi {customer_name},</p>
+            <p>We received a request to reset the password for your HoneyBiz account. Your One-Time Password (OTP) is:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <div style="display: inline-block; padding: 15px 30px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: {EmailTemplates.PRIMARY_COLOR}; background-color: {EmailTemplates.LIGHT_COLOR}; border: 2px dashed {EmailTemplates.PRIMARY_COLOR}; border-radius: 10px;">
+                    {otp}
+                </div>
+            </div>
+            
+            <p>This code will expire in {expires_in_minutes} minutes.</p>
+            
+            <div class="warning-box" style="margin-top: 30px; padding: 15px; background-color: rgba(255, 217, 61, 0.2); border-left: 4px solid {EmailTemplates.WARNING_COLOR}; border-radius: 4px;">
+                <strong>Didn't request this?</strong> If you didn't ask to reset your password, you can safely ignore this email. Your account is still secure.
+            </div>
+        </div>
+        """
+        
+        preheader = "Your password reset OTP code for HoneyBiz."
+        return EmailTemplates._base_template(content, preheader)
