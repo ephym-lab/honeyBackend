@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.database import get_db
+from app.api.deps import get_current_admin
 from app.schemas.customer_request import CustomerRequestCreate, CustomerRequestUpdateStatus
 from app.services.customer_request_service import CustomerRequestService
 
@@ -20,7 +21,8 @@ async def create_request(
 @router.get("")
 async def get_all_requests(
     reason: Optional[str] = Query(None, description="Filter requests by category"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
 ):
     """Retrieve all customer requests, optionally filtered by reason."""
     service = CustomerRequestService(db)
@@ -28,7 +30,8 @@ async def get_all_requests(
 
 @router.get("/stats")
 async def get_request_stats(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
 ):
     """Get statistics for customer requests."""
     service = CustomerRequestService(db)
@@ -37,7 +40,8 @@ async def get_request_stats(
 @router.get("/{request_id}")
 async def get_request_by_id(
     request_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
 ):
     """Retrieve a single request by ID."""
     service = CustomerRequestService(db)
@@ -47,7 +51,8 @@ async def get_request_by_id(
 async def update_request_status(
     request_id: str,
     status_data: CustomerRequestUpdateStatus,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
 ):
     """Update the status of a specific request."""
     service = CustomerRequestService(db)
@@ -56,7 +61,8 @@ async def update_request_status(
 @router.delete("/{request_id}")
 async def delete_request(
     request_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
 ):
     """Delete a specific customer request."""
     service = CustomerRequestService(db)
