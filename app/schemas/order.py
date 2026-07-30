@@ -92,3 +92,7 @@ class OrderTrackResponse(BaseModel):
     success: bool = True
     message: str
     data: Order
+
+class BulkDeleteRequest(BaseModel):
+    """Schema for bulk deleting orders."""
+    order_ids: List[str] = Field(..., min_length=1)

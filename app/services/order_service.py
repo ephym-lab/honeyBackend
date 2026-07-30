@@ -738,3 +738,61 @@ class OrderService(OrderManagerService):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to search orders: {str(e)}"
             )   
+
+    def delete_order(self, order_id: str):
+        """
+        Delete order by ID.
+        
+        Args:
+            order_id: Order ID
+            
+        Returns:
+            dict: Success response
+            
+        Raises:
+            HTTPException: If order not found
+        """
+        order = self.db.query(Order).filter(Order.id == order_id).first()
+        
+        if not order:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Order not found"
+            )
+        
+        self.db.delete(order)
+        self.db.commit()
+        
+        return {
+            "success": True,
+            "message": "Order deleted successfully"
+        }
+
+    def bulk_delete_orders(self, order_ids: list[str]):
+        """
+        Delete multiple orders by ID.
+        
+        Args:
+            order_ids: List of Order IDs
+            
+        Returns:
+            dict: Success response
+            
+        Raises:
+            HTTPException: If an error occurs
+        """
+        try:
+            # Delete orders that match the IDs
+            deleted_count = self.db.query(Order).filter(Order.id.in_(order_ids)).delete(synchronize_session=False)
+            self.db.commit()
+            
+            return {
+                "success": True,
+                "message": f"Successfully deleted {deleted_count} orders"
+            }
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to bulk delete orders: {str(e)}"
+            )
