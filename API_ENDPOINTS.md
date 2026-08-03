@@ -1021,6 +1021,56 @@ Content-Type: application/json
 }
 ```
 
+### 9. Delete Order
+
+**Endpoint:** `DELETE /v1/orders/{order_id}`
+
+**Description:** Delete order by ID.
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Path Parameters:**
+- `order_id` (required): Order ID
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Order deleted successfully"
+}
+```
+
+### 10. Bulk Delete Orders
+
+**Endpoint:** `POST /v1/orders/bulk-delete`
+
+**Description:** Bulk delete orders by ID.
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "order_ids": [
+    "string"
+  ]
+}
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Orders deleted successfully"
+}
+```
+
 ---
 
 ## Reviews
