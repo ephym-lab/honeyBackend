@@ -1387,6 +1387,38 @@ Content-Type: application/json
 
 ---
 
+### 3. Send Newsletter Broadcast (Admin Only)
+
+**Endpoint:** `POST /v1/newsletter/admin/broadcast`
+
+**Description:** Send a newsletter to all active subscribers. Requires admin authentication.
+
+**Request Headers:**
+```
+Content-Type: application/json
+Authorization: Bearer <admin_token>
+```
+
+**Request Body:**
+```json
+{
+  "subject": "New Honey Collection Launch! 🍯",
+  "html_body": "<h1>Check out our new collection</h1><p>Beautiful honey and equipment...</p>"
+}
+```
+
+**Response Body (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Newsletter broadcast sent successfully",
+  "emails_sent": 150,
+  "failed_emails": []
+}
+```
+
+---
+
 ## Analytics
 
 ### 1. Get Dashboard Analytics

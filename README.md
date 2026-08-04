@@ -16,30 +16,25 @@ The backend needs some basic settings to run.
 2. Rename the duplicated file to exactly `.env` (don't forget the dot!).
    *(You don't even need to edit the database URL inside it—Docker handles the database connection automatically!)*
 
-### 3. Start the Server
-Open your terminal in this project's folder and run:
+### 3. Start the Server (One-Click Setup!)
+We've created a handy script that will automatically start Docker, set up your database tables (running the migrations), and create your admin account all in one go!
 
+Open your terminal in this project's folder and run the script for your operating system:
+
+**For Mac/Linux:**
 ```bash
-docker compose up --build -d
-```
-*(This command downloads everything needed, sets up the database, and starts the server in the background. It might take a minute or two the first time).*
-
-### 4. Create the Database Tables
-Now we tell our newly running backend to create all the necessary tables in the database. 
-
-```bash
-docker compose exec app alembic upgrade head
+./setup.sh
 ```
 
-### 5. Create Your Admin Account
-To log into the admin dashboard later, you'll need an admin account. We have a handy script to do this for you! Run:
-
-```bash
-docker compose exec app python create_admin.py
+**For Windows:**
+Double-click the `setup.bat` file in your folder, or run:
+```cmd
+setup.bat
 ```
-*(You should see a message saying "✅ Admin created successfully!")*
 
-### 6. Access the API
+*(This will download everything needed, set up the database, and start the server. It might take a minute or two the first time).*
+
+### 4. Access the API
 You're all set! Open your web browser and go to:
 - **Interactive Documentation (Swagger UI):** [http://localhost:8000/v1/docs](http://localhost:8000/v1/docs)  
   *(This is the easiest way to see and test all our API endpoints!)*

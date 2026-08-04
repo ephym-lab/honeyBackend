@@ -51,4 +51,3 @@ async def send_newsletter_broadcast(
         subject=broadcast_data.subject,
         html_body=broadcast_data.html_body
     )
-
