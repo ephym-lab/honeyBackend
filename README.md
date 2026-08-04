@@ -2,101 +2,54 @@
 
 FastAPI backend for the e-commerce candle website.
 
-## Quick Start
+## 🚀 Quick Start for Beginners (Docker Edition)
 
-### 1. Set up virtual environment
+Welcome! We use **Docker** to make running this backend incredibly easy. You won't need to manually install PostgreSQL, Python, or configure complex database settings yourself.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate  # On Linux/Mac
-# or
-venv\Scripts\activate  # On Windows
-```
+### 1. Install Docker
+If you don't have it already, download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/). Make sure it is running before you continue.
 
-### 2. Install dependencies
+### 2. Configure Your Environment Variables
+The backend needs some basic settings to run.
 
-```bash
-pip install -r requirements.txt
-```
+1. In the root folder of this project, duplicate the file named `env.example`.
+2. Rename the duplicated file to exactly `.env` (don't forget the dot!).
+   *(You don't even need to edit the database URL inside it—Docker handles the database connection automatically!)*
 
-### 3. Set up PostgreSQL
+### 3. Start the Server
+Open your terminal in this project's folder and run:
 
 ```bash
-# Install PostgreSQL
-sudo apt install postgresql postgresql-contrib  # Ubuntu/Debian
-# or
-brew install postgresql@14  # macOS
-
-# Create database
-sudo -u postgres psql
-CREATE DATABASE honeybiz;
-CREATE USER postgres WITH PASSWORD 'password';
-GRANT ALL PRIVILEGES ON DATABASE honeybiz TO postgres;
-\q
+docker compose up --build -d
 ```
+*(This command downloads everything needed, sets up the database, and starts the server in the background. It might take a minute or two the first time).*
 
-### 4. Configure environment
+### 4. Create the Database Tables
+Now we tell our newly running backend to create all the necessary tables in the database. 
 
 ```bash
-# Copy env.example to .env
-cp env.example .env
-
-# Edit .env with your configuration
-nano .env
+docker compose exec app alembic upgrade head
 ```
 
-**Important:** Update these values in `.env`:
-- `DATABASE_URL` - Your PostgreSQL connection string
-- `SECRET_KEY` - Generate a secure random key (min 32 characters)
-- Email settings for notifications
-- M-Pesa credentials (for payment integration)
-
-### 5. Run database migrations
+### 5. Create Your Admin Account
+To log into the admin dashboard later, you'll need an admin account. We have a handy script to do this for you! Run:
 
 ```bash
-# Initialize Alembic (first time only)
-alembic init alembic
-
-# Create initial migration
-alembic revision --autogenerate -m "Initial migration"
-
-# Run migrations
-alembic upgrade head
+docker compose exec app python create_admin.py
 ```
+*(You should see a message saying "✅ Admin created successfully!")*
 
-### 6. Create admin user
+### 6. Access the API
+You're all set! Open your web browser and go to:
+- **Interactive Documentation (Swagger UI):** [http://localhost:8000/v1/docs](http://localhost:8000/v1/docs)  
+  *(This is the easiest way to see and test all our API endpoints!)*
+- **Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
 
+---
+**To stop the server later:**
 ```bash
-# Run Python shell
-python3
-
-# In Python shell:
-from app.database import SessionLocal
-from app.models.user import User
-from app.core.security import get_password_hash
-
-db = SessionLocal()
-admin = User(
-    email="admin@honeybiz.com",
-    password_hash=get_password_hash("admin123"),
-    role="admin"
-)
-db.add(admin)
-db.commit()
-exit()
+docker compose down
 ```
-
-### 7. Start the development server
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 8. Access the API
-
-- **API Docs:** http://localhost:8000/v1/docs
-- **ReDoc:** http://localhost:8000/v1/redoc
-- **Health Check:** http://localhost:8000/health
 
 ## Project Structure
 
