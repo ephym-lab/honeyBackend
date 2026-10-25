@@ -16,4 +16,5 @@ class Review(Base):
     comment = Column(Text, nullable=False)
     date = Column(Date, nullable=False)
     verified = Column(Boolean, default=False)
+    featured = Column(Boolean, default=False)  # shown on the Home page
     created_at = Column(TIMESTAMP, server_default=func.now())

@@ -371,10 +371,14 @@ class ProductService(ProductManagerService):
                 )
             
             # Determine availability status
-            if product.stock > 10:
-                availability_status = "In Stock"
-            elif product.stock > 0:
+            # Same rule as the Dashboard: each product's own low-stock level (empty = 5)
+            from app.services.stock_alerts import level_for
+            if product.stock <= 0:
+                availability_status = "Out of Stock"
+            elif product.stock <= level_for(getattr(product, "low_stock_level", None)):
                 availability_status = "Low Stock"
+            elif product.stock > 0:
+                availability_status = "In Stock"
             else:
                 availability_status = "Out of Stock"
             

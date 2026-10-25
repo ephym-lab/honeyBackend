@@ -23,6 +23,9 @@ class CustomerRequestService:
                 participants=request_data.participants,
                 preferred_date=request_data.preferred_date,
                 location=request_data.location,
+                products=request_data.products,
+                quantity=request_data.quantity,
+                subject=request_data.subject,
                 message=request_data.message,
                 status="New"
             )
@@ -33,13 +36,18 @@ class CustomerRequestService:
             # Create a notification for the admin
             notification_service = NotificationService(self.db)
             notification_service.create_notification(
-                title=f"New {request_data.reason}",
+                title=f"New {request_data.reason}" + (f" ({new_request.reference})" if getattr(new_request, "reference", None) else ""),
                 message=f"A new request has been submitted by {request_data.name}.",
                 notification_type="customer_request",
                 priority="high",
                 related_entity="customer_request",
                 related_id=str(new_request.id)
             )
+            
+            # Email the admin and the customer (never blocks the request)
+            
+            self._send_request_emails(new_request)
+
             
             return {
                 "success": True,
@@ -99,8 +107,16 @@ class CustomerRequestService:
                     detail="Request not found"
                 )
             
+            old_status = request.status
             request.status = status_data.status #type:ignore
             self.db.commit()
+            if str(old_status or "") != str(status_data.status or ""):
+                try:
+                    from app.services import followup_service
+                    followup_service.log(self.db, str(request.id), f"Status changed to {status_data.status}")
+                except Exception as e:
+                    self.db.rollback()
+                    print(f"[Follow-ups] Could not log status change: {e}")
             self.db.refresh(request)
             return {
                 "success": True,
@@ -179,3 +195,27 @@ class CustomerRequestService:
                 detail=f"Failed to delete request: {str(e)}"
             )
 
+
+    def _send_request_emails(self, req):
+        """Alert the admin and confirm to the customer. Failures are logged, never raised."""
+        try:
+            import os
+            from app.services.email_service import EmailService
+            from app.services.email_templates import EmailTemplates
+
+            email_service = EmailService()
+            admin_email = os.getenv("ADMIN_EMAIL") or email_service.from_email
+            if admin_email:
+                email_service.send_html_email(
+                    admin_email,
+                    (f"{req.reference}: " if getattr(req, "reference", None) else "") + f"New {req.reason} from {req.name}",
+                    EmailTemplates.admin_request_notification(req),
+                )
+            if req.email:
+                email_service.send_html_email(
+                    req.email,
+                    f"We have received your request {getattr(req, 'reference', None) or ''} - Pedni Honey".replace("  ", " "),
+                    EmailTemplates.request_received(req),
+                )
+        except Exception as e:
+            print(f"Request saved but email failed: {e}")

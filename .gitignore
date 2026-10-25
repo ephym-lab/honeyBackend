@@ -33,3 +33,10 @@ uploads/
 .vscode/
 pyrightconfig.json
 
+
+# installer backups
+*.bak-*
+*.new-*
+docker-compose.yml.backup
+docker-compose.yml.before-move
+.env.before-move

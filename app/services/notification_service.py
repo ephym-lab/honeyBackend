@@ -75,7 +75,11 @@ class NotificationService:
         return {
             "success": True,
             "message": "Notification marked as read",
-            "data": notification
+            "data": {
+                "id": str(notification.id),
+                "is_read": True,
+                "unread_count": self.db.query(Notification).filter(Notification.is_read == False).count(),
+            }
         }
 
     def mark_all_as_read(self):
@@ -89,6 +93,30 @@ class NotificationService:
             return {
                 "success": True,
                 "message": "All notifications marked as read"
+            }
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to mark notifications as read: {str(e)}"
+            )
+
+    def mark_related_as_read(self, related_id: str, related_entity: Optional[str] = None):
+        """Mark every unread notification about one order/request as read."""
+        try:
+            query = self.db.query(Notification).filter(
+                Notification.is_read == False,
+                Notification.related_id == str(related_id),
+            )
+            if related_entity:
+                query = query.filter(func.lower(Notification.related_entity) == related_entity.lower())
+            marked = query.update({"is_read": True, "read_at": func.now()}, synchronize_session=False)
+            self.db.commit()
+            unread = self.db.query(Notification).filter(Notification.is_read == False).count()
+            return {
+                "success": True,
+                "message": f"{marked} notification(s) marked as read",
+                "data": {"marked": marked, "unread_count": unread},
             }
         except Exception as e:
             self.db.rollback()

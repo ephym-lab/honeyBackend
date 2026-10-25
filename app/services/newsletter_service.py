@@ -71,7 +71,7 @@ class NewsletterService(NewsletterManagerService):
                 html_body = EmailTemplates.newsletter_subscription(
                     email=subscription_data.email
                 )
-                subject = "Welcome to HoneyBiz Newsletter! 🍯"
+                subject = "Welcome to the Pedni Honey Newsletter"
                 self.email_service.send_html_email(
                     subscription_data.email,
                     subject,
@@ -130,7 +130,7 @@ class NewsletterService(NewsletterManagerService):
         # Send unsubscribe confirmation email (non-blocking)
         try:
             html_body = EmailTemplates.newsletter_unsubscription(email=email)
-            subject = "You've been unsubscribed from HoneyBiz Newsletter"
+            subject = "You have been unsubscribed from the Pedni Honey newsletter"
             self.email_service.send_html_email(email, subject, html_body)
             print(f"Newsletter unsubscribe confirmation sent to {email}")
         except Exception as e:

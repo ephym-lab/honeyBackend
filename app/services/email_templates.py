@@ -1,34 +1,101 @@
 """
-HTML Email Templates for HoneyBiz
-Beautiful, responsive email templates for all customer communications
+HTML email templates for Pedni Honey.
+Colours match the website (src/index.css). No emojis.
+Links point to FRONTEND_URL from .env (e.g. http://localhost:5173 or your live site).
 """
 
+import os
+from html import escape
 from typing import Dict, List, Optional
+from urllib.parse import urlencode
+
+
+def _frontend_url() -> str:
+    return (os.getenv("FRONTEND_URL") or "http://localhost:5173").rstrip("/")
+
+
+def _e(value) -> str:
+    """Escape text that came from customers so it can't break the email."""
+    return escape(str(value if value is not None else ""))
 
 
 class EmailTemplates:
-    """HTML email templates with modern, responsive design"""
-    
-    # Brand colors
-    PRIMARY_COLOR = "#FF6B6B"
-    SECONDARY_COLOR = "#4ECDC4"
-    DARK_COLOR = "#2C3E50"
-    LIGHT_COLOR = "#F8F9FA"
-    SUCCESS_COLOR = "#51CF66"
-    WARNING_COLOR = "#FFD93D"
-    
+    """HTML email templates in the Pedni Honey brand colours."""
+
+    # Brand colours - same as the website
+    PRIMARY_COLOR = "#F4C011"      # honey yellow (buttons)
+    PRIMARY_TEXT = "#1A1A1A"       # dark text on yellow
+    DARK_COLOR = "#1A1A1A"         # headings / body text
+    DARK_BG = "#201A0B"            # header / footer background
+    DARK_BG_TEXT = "#F4C011"       # text on dark background
+    MUTED_TEXT = "#555555"
+    LIGHT_COLOR = "#FFFBE0"        # soft honey background
+    WARM_COLOR = "#FFF8CC"
+    BORDER_COLOR = "#E5E0C0"
+    TEAL = "#0F6E6E"
+    WARNING_COLOR = "#D66A3B"
+
+    BUSINESS_NAME = "Pedni Honey"
+    TAGLINE = "Nurturing Nature's Gift"
+    CONTACT_PHONE = "0704 089 414"
+    CONTACT_EMAIL = "pedni2021@gmail.com"
+    POSTAL_ADDRESS = "P.O Box 157-40301, Kendu Bay"
+
+    # ------------------------------------------------------------------ links
+
+    @staticmethod
+    def track_order_url(order_id: str, email: Optional[str] = None) -> str:
+        params = {"id": order_id}
+        if email:
+            params["email"] = email
+        return f"{_frontend_url()}/track-order?{urlencode(params)}"
+
+    @staticmethod
+    def account_invite(email: Optional[str] = None) -> str:
+        """'Create an account' box for order emails. Empty unless CUSTOMER_ACCOUNTS_ENABLED=true."""
+        if str(os.getenv("CUSTOMER_ACCOUNTS_ENABLED", "false")).strip().lower() not in ("1", "true", "yes", "on"):
+            return ""
+        url = f"{_frontend_url()}/account/register"
+        if email:
+            url += "?" + urlencode({"email": email})
+        return f"""
+            <div class="info-box" style="text-align: center;">
+                <strong>Save your details for next time</strong><br>
+                Create a free Pedni Honey account to see all your orders in one place and check out faster.
+                Use this same email and your past orders will be added automatically.
+                <div style="margin-top: 12px;">
+                    <a href="{_e(url)}" style="color: {EmailTemplates.TEAL}; font-weight: 600;">Create my account</a>
+                </div>
+            </div>
+        """
+
+    @staticmethod
+    def admin_orders_url(order_id: Optional[str] = None) -> str:
+        url = f"{_frontend_url()}/admin/orders"
+        return f"{url}?{urlencode({'search': order_id})}" if order_id else url
+
+    @staticmethod
+    def button(label: str, url: str) -> str:
+        """Bulletproof email button (works in Gmail, Outlook and phones)."""
+        return f"""
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 30px auto;">
+          <tr>
+            <td align="center" bgcolor="{EmailTemplates.PRIMARY_COLOR}" style="border-radius: 8px;">
+              <a href="{_e(url)}" target="_blank"
+                 style="display: inline-block; padding: 14px 32px; font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+                        font-size: 16px; font-weight: 600; color: {EmailTemplates.PRIMARY_TEXT}; text-decoration: none;
+                        border-radius: 8px; background-color: {EmailTemplates.PRIMARY_COLOR};">{_e(label)}</a>
+            </td>
+          </tr>
+        </table>
+        """
+
+    # ------------------------------------------------------------------ layout
+
     @staticmethod
     def _base_template(content: str, preheader: str = "") -> str:
-        """
-        Base HTML template with responsive design and brand styling
-        
-        Args:
-            content: Main email content
-            preheader: Preview text shown in email clients
-            
-        Returns:
-            Complete HTML email
-        """
+        T = EmailTemplates
+        site = _frontend_url()
         return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -36,15 +103,14 @@ class EmailTemplates:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>HoneyBiz</title>
+    <title>{T.BUSINESS_NAME}</title>
     <style>
         body {{
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f1e6;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }}
         .email-container {{
             max-width: 600px;
@@ -52,196 +118,195 @@ class EmailTemplates:
             background-color: #ffffff;
         }}
         .header {{
-            background: linear-gradient(135deg, {EmailTemplates.PRIMARY_COLOR} 0%, {EmailTemplates.SECONDARY_COLOR} 100%);
-            padding: 40px 20px;
+            background-color: {T.DARK_BG};
+            padding: 32px 20px;
             text-align: center;
+            border-bottom: 4px solid {T.PRIMARY_COLOR};
         }}
         .header h1 {{
-            color: #ffffff;
+            color: {T.DARK_BG_TEXT};
             margin: 0;
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: 0.5px;
         }}
         .header .tagline {{
-            color: #ffffff;
-            margin: 10px 0 0 0;
+            color: #cfc7ad;
+            margin: 8px 0 0 0;
             font-size: 14px;
-            opacity: 0.9;
         }}
         .content {{
-            padding: 40px 30px;
-            color: {EmailTemplates.DARK_COLOR};
+            padding: 36px 30px;
+            color: {T.DARK_COLOR};
             line-height: 1.6;
         }}
         .content h2 {{
-            color: {EmailTemplates.DARK_COLOR};
-            font-size: 24px;
+            color: {T.DARK_COLOR};
+            font-size: 22px;
             margin-top: 0;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }}
         .content p {{
-            margin: 15px 0;
-            font-size: 16px;
-        }}
-        .button {{
-            display: inline-block;
-            padding: 14px 30px;
-            background: linear-gradient(135deg, {EmailTemplates.PRIMARY_COLOR} 0%, {EmailTemplates.SECONDARY_COLOR} 100%);
-            color: #ffffff !important;
-            text-decoration: none;
-            border-radius: 25px;
-            font-weight: 600;
-            margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
-            transition: transform 0.2s;
-        }}
-        .button:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+            margin: 14px 0;
+            font-size: 15px;
         }}
         .order-summary {{
-            background-color: {EmailTemplates.LIGHT_COLOR};
+            background-color: {T.LIGHT_COLOR};
+            border: 1px solid {T.BORDER_COLOR};
             border-radius: 10px;
-            padding: 25px;
-            margin: 25px 0;
+            padding: 22px;
+            margin: 22px 0;
         }}
         .order-item {{
-            padding: 15px 0;
-            border-bottom: 1px solid #dee2e6;
+            padding: 12px 0;
+            border-bottom: 1px solid {T.BORDER_COLOR};
         }}
         .order-item:last-child {{
             border-bottom: none;
         }}
         .order-item-name {{
             font-weight: 600;
-            color: {EmailTemplates.DARK_COLOR};
-            font-size: 16px;
+            font-size: 15px;
         }}
         .order-item-details {{
-            color: #6c757d;
+            color: {T.MUTED_TEXT};
             font-size: 14px;
-            margin-top: 5px;
+            margin-top: 4px;
         }}
-        .total-row {{
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            font-size: 16px;
+        .total-table {{
+            width: 100%;
+            margin-top: 16px;
+            font-size: 15px;
         }}
-        .total-row.grand-total {{
+        .total-table td {{
+            padding: 6px 0;
+        }}
+        .grand-total td {{
             font-weight: 700;
-            font-size: 20px;
-            color: {EmailTemplates.PRIMARY_COLOR};
-            border-top: 2px solid {EmailTemplates.PRIMARY_COLOR};
-            margin-top: 15px;
-            padding-top: 15px;
+            font-size: 18px;
+            border-top: 2px solid {T.PRIMARY_COLOR};
+            padding-top: 12px;
         }}
         .info-box {{
-            background-color: #e7f5ff;
-            border-left: 4px solid {EmailTemplates.SECONDARY_COLOR};
-            padding: 15px 20px;
+            background-color: {T.WARM_COLOR};
+            border-left: 4px solid {T.PRIMARY_COLOR};
+            padding: 14px 18px;
             margin: 20px 0;
-            border-radius: 5px;
+            border-radius: 6px;
+            font-size: 15px;
         }}
         .status-badge {{
             display: inline-block;
-            padding: 8px 16px;
+            padding: 4px 12px;
             border-radius: 20px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }}
-        .status-pending {{
-            background-color: #fff3cd;
-            color: #856404;
-        }}
-        .status-paid {{
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }}
-        .status-processing {{
-            background-color: #cce5ff;
-            color: #004085;
-        }}
-        .status-shipped {{
-            background-color: #d4edda;
-            color: #155724;
-        }}
-        .status-delivered {{
-            background-color: #d1f2eb;
-            color: #0f5132;
-        }}
-        .status-cancelled {{
-            background-color: #f8d7da;
-            color: #721c24;
-        }}
-        .footer {{
-            background-color: {EmailTemplates.DARK_COLOR};
-            color: #ffffff;
-            padding: 30px 20px;
-            text-align: center;
-            font-size: 14px;
-        }}
-        .footer a {{
-            color: {EmailTemplates.SECONDARY_COLOR};
-            text-decoration: none;
-        }}
-        .footer .social-links {{
-            margin: 20px 0;
-        }}
-        .footer .social-links a {{
-            display: inline-block;
-            margin: 0 10px;
-            color: #ffffff;
-        }}
+        .status-pending {{ background-color: #FDEAAD; color: #6b5200; }}
+        .status-paid {{ background-color: #E3F2F1; color: #0F6E6E; }}
+        .status-processing {{ background-color: #E3F2F1; color: #0F6E6E; }}
+        .status-shipped {{ background-color: #EAF3E5; color: #4C7A3D; }}
+        .status-delivered {{ background-color: #EAF3E5; color: #4C7A3D; }}
+        .status-cancelled {{ background-color: #FBE8E0; color: #D66A3B; }}
         .divider {{
             height: 1px;
-            background: linear-gradient(to right, transparent, {EmailTemplates.PRIMARY_COLOR}, transparent);
-            margin: 30px 0;
+            background-color: {T.BORDER_COLOR};
+            margin: 28px 0;
+        }}
+        .small {{
+            color: {T.MUTED_TEXT};
+            font-size: 14px;
+        }}
+        .footer {{
+            background-color: {T.DARK_BG};
+            color: #cfc7ad;
+            padding: 28px 20px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.7;
+        }}
+        .footer strong {{
+            color: {T.DARK_BG_TEXT};
+            font-size: 15px;
+        }}
+        .footer a {{
+            color: {T.DARK_BG_TEXT};
+            text-decoration: none;
         }}
         @media only screen and (max-width: 600px) {{
-            .content {{
-                padding: 30px 20px;
-            }}
-            .header h1 {{
-                font-size: 26px;
-            }}
-            .total-row {{
-                font-size: 14px;
-            }}
-            .total-row.grand-total {{
-                font-size: 18px;
-            }}
+            .content {{ padding: 28px 18px; }}
+            .header h1 {{ font-size: 24px; }}
         }}
     </style>
 </head>
 <body>
-    <div style="display: none; max-height: 0; overflow: hidden;">{preheader}</div>
+    <div style="display: none; max-height: 0; overflow: hidden;">{_e(preheader)}</div>
     <div class="email-container">
         <div class="header">
-            <h1>🍯 HoneyBiz</h1>
-            <p class="tagline">Illuminate Your Space with Elegance</p>
+            <h1>{T.BUSINESS_NAME}</h1>
+            <p class="tagline">{T.TAGLINE}</p>
         </div>
         {content}
         <div class="footer">
-            <p><strong>HoneyBiz - Premium Handcrafted HoneyBiz</strong></p>
-            <p>Thank you for choosing us to brighten your space!</p>
-            <div class="divider" style="background: linear-gradient(to right, transparent, {EmailTemplates.SECONDARY_COLOR}, transparent);"></div>
-            <p style="font-size: 12px; color: #adb5bd; margin-top: 20px;">
-                This email was sent to you because you are a valued customer of HoneyBiz.<br>
-                If you have any questions, please reply to this email or contact our support team.
+            <p><strong>Pedni Honey Apiaries Limited</strong></p>
+            <p>Pure honey, beekeeping equipment, training and support.</p>
+            <p>
+                Phone: <a href="tel:+254704089414">{T.CONTACT_PHONE}</a> &nbsp;|&nbsp;
+                Email: <a href="mailto:{T.CONTACT_EMAIL}">{T.CONTACT_EMAIL}</a><br>
+                {T.POSTAL_ADDRESS}<br>
+                <a href="{site}">Visit our shop</a>
             </p>
-            <p style="font-size: 12px; color: #adb5bd; margin-top: 10px;">
-                © 2026 HoneyBiz. All rights reserved.
+            <p style="font-size: 12px; color: #9c947c; margin-top: 16px;">
+                If you have any questions, simply reply to this email.<br>
+                &copy; 2026 Pedni Honey Apiaries Limited. All rights reserved.
             </p>
         </div>
     </div>
 </body>
 </html>
         """
-    
+
+    # ------------------------------------------------------------------ shared pieces
+
+    @staticmethod
+    def _items_html(items: List[Dict], with_prices: bool = True) -> str:
+        html = ""
+        for item in items or []:
+            name = _e(item.get("productName"))
+            qty = item.get("quantity", 0)
+            if with_prices:
+                price = item.get("price", 0)
+                details = f"Quantity: {qty} x KES {price:,.2f} = KES {qty * price:,.2f}"
+            else:
+                details = f"Quantity: {qty}"
+            html += f"""
+            <div class="order-item">
+                <div class="order-item-name">{name}</div>
+                <div class="order-item-details">{details}</div>
+            </div>
+            """
+        return html
+
+    @staticmethod
+    def _totals_html(subtotal: float, shipping: float, total: float) -> str:
+        return f"""
+        <table class="total-table" role="presentation" cellpadding="0" cellspacing="0">
+            <tr><td>Subtotal</td><td align="right">KES {subtotal:,.2f}</td></tr>
+            <tr><td>Delivery</td><td align="right">KES {shipping:,.2f}</td></tr>
+            <tr class="grand-total"><td>Total</td><td align="right">KES {total:,.2f}</td></tr>
+        </table>
+        """
+
+    @staticmethod
+    def _payment_display(payment_method: str) -> str:
+        return {"mpesa": "M-Pesa", "cash": "Cash on Delivery"}.get(
+            str(payment_method).lower(), str(payment_method).replace("_", " ").title()
+        )
+
+    # ------------------------------------------------------------------ customer emails
+
     @staticmethod
     def order_confirmation(
         customer_name: str,
@@ -254,99 +319,52 @@ class EmailTemplates:
         payment_method: str,
         address: str,
         city: str,
-        county: str
+        county: str,
+        email: Optional[str] = None,
     ) -> str:
-        """
-        Order confirmation email template
-        
-        Args:
-            customer_name: Customer's name
-            order_id: Order ID
-            order_date: Order date
-            items: List of order items
-            subtotal: Subtotal amount
-            shipping: Shipping cost
-            total: Total amount
-            payment_method: Payment method
-            address: Delivery address
-            city: City
-            county: County
-            
-        Returns:
-            HTML email content
-        """
-        # Build items HTML
-        items_html = ""
-        for item in items:
-            items_html += f"""
-            <div class="order-item">
-                <div class="order-item-name">{item['productName']}</div>
-                <div class="order-item-details">
-                    Quantity: {item['quantity']} × KES {item['price']:,.2f} = KES {(item['quantity'] * item['price']):,.2f}
-                </div>
-            </div>
-            """
-        
-        # Payment method display
-        payment_display = payment_method.upper().replace("_", " ")
-        
+        T = EmailTemplates
         content = f"""
         <div class="content">
-            <h2>🎉 Order Confirmed!</h2>
-            <p>Hi <strong>{customer_name}</strong>,</p>
-            <p>Thank you for your order! We're excited to prepare your honey and equipment for delivery.</p>
-            
+            <h2>Order Confirmed</h2>
+            <p>Hi <strong>{_e(customer_name)}</strong>,</p>
+            <p>Thank you for your order. We have received it and will prepare your items for delivery.</p>
+
             <div class="info-box">
-                <strong>Order ID:</strong> {order_id}<br>
-                <strong>Order Date:</strong> {order_date}<br>
-                <strong>Status:</strong> <span class="status-badge status-pending">Pending</span>
+                <strong>Order ID:</strong> {_e(order_id)}<br>
+                <strong>Order Date:</strong> {_e(order_date)}<br>
+                <strong>Status:</strong> <span class="status-badge status-paid">Paid</span>
             </div>
-            
-            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Order Summary</h3>
+
+            <h3 style="margin-top: 28px;">Order Summary</h3>
             <div class="order-summary">
-                {items_html}
-                
-                <div style="margin-top: 20px;">
-                    <div class="total-row">
-                        <span>Subtotal:</span>
-                        <span>KES {subtotal:,.2f}</span>
-                    </div>
-                    <div class="total-row">
-                        <span>Shipping:</span>
-                        <span>KES {shipping:,.2f}</span>
-                    </div>
-                    <div class="total-row grand-total">
-                        <span>Total:</span>
-                        <span>KES {total:,.2f}</span>
-                    </div>
-                </div>
+                {T._items_html(items)}
+                {T._totals_html(subtotal, shipping, total)}
             </div>
-            
-            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Delivery Information</h3>
+
+            <h3 style="margin-top: 28px;">Delivery Information</h3>
             <div class="info-box">
-                <strong>Address:</strong> {address}<br>
-                <strong>City:</strong> {city}<br>
-                <strong>County:</strong> {county}<br>
-                <strong>Payment Method:</strong> {payment_display}
+                <strong>Address:</strong> {_e(address)}<br>
+                {('<strong>City:</strong> ' + _e(city) + '<br>') if city and city != county else ''}
+                <strong>County:</strong> {_e(county)}<br>
+                <strong>Payment Method:</strong> {T._payment_display(payment_method)}
             </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="#" class="button">Track Your Order</a>
-            </div>
-            
+
+            {T.button("Track Your Order", T.track_order_url(order_id, email))}
+
+            {T.account_invite(email)}
+
             <div class="divider"></div>
-            
-            <p style="color: #6c757d; font-size: 14px;">
-                <strong>What's Next?</strong><br>
-                We'll send you another email once your order has been shipped with tracking information.
-                If you have any questions, feel free to reply to this email.
+
+            <p class="small">
+                <strong>What happens next?</strong><br>
+                We will email you each time your order status changes. You can also check it any time
+                with the Track Your Order button above, using your order ID and email address.
             </p>
         </div>
         """
-        
-        preheader = f"Your order {order_id} has been confirmed! Thank you for shopping with HoneyBiz."
-        return EmailTemplates._base_template(content, preheader)
-    
+        preheader = f"Your order {order_id} has been confirmed. Thank you for shopping with Pedni Honey."
+        return T._base_template(content, preheader)
+
     @staticmethod
     def order_status_update(
         customer_name: str,
@@ -354,187 +372,147 @@ class EmailTemplates:
         status: str,
         items: List[Dict],
         total: float,
-        message: Optional[str] = None
+        message: Optional[str] = None,
+        email: Optional[str] = None,
     ) -> str:
-        """
-        Order status update email template
-        
-        Args:
-            customer_name: Customer's name
-            order_id: Order ID
-            status: New order status
-            items: List of order items
-            total: Total amount
-            message: Optional custom message
-            
-        Returns:
-            HTML email content
-        """
-        # Status-specific content
+        T = EmailTemplates
         status_messages = {
-            "paid": {
-                "icon": "💳",
-                "title": "Payment Confirmed",
-                "message": "Your payment has been successfully processed. We're preparing your order for shipment!"
-            },
-            "processing": {
-                "icon": "📦",
-                "title": "Order Being Prepared",
-                "message": "Great news! We're carefully preparing your items for shipment."
-            },
-            "shipped": {
-                "icon": "🚚",
-                "title": "Order Shipped",
-                "message": "Your order is on its way! You should receive it within 2-3 business days."
-            },
-            "delivered": {
-                "icon": "✅",
-                "title": "Order Delivered",
-                "message": "Your order has been delivered! We hope you love your new items."
-            },
-            "cancelled": {
-                "icon": "❌",
-                "title": "Order Cancelled",
-                "message": "Your order has been cancelled. If you didn't request this, please contact us immediately."
-            }
+            "pending": ("Order Received", "We have received your order and it is waiting to be processed."),
+            "paid": ("Payment Confirmed", "Your payment has been received. We are now preparing your order."),
+            "processing": ("Order Being Prepared", "We are carefully preparing your items for delivery."),
+            "shipped": ("Order On Its Way", "Your order has left our store and is on its way to you."),
+            "delivered": ("Order Delivered", "Your order has been delivered. We hope you enjoy your products."),
+            "cancelled": ("Order Cancelled",
+                          "Your order has been cancelled. If you did not request this, please contact us right away."),
         }
-        
-        status_info = status_messages.get(status.lower(), {
-            "icon": "📋",
-            "title": "Order Status Update",
-            "message": f"Your order status has been updated to {status}."
-        })
-        
-        # Build items HTML
-        items_html = ""
-        for item in items:
-            items_html += f"""
-            <div class="order-item">
-                <div class="order-item-name">{item['productName']}</div>
-                <div class="order-item-details">Quantity: {item['quantity']}</div>
-            </div>
-            """
-        
-        custom_message = f"<p>{message}</p>" if message else ""
-        
+        key = str(status).lower()
+        title, text = status_messages.get(key, ("Order Status Update", f"Your order status is now {_e(status)}."))
+
+        extra = ""
+        if message and message.strip() and message.strip() != "Your order status has been updated.":
+            extra = f"<p>{_e(message)}</p>"
+
         content = f"""
         <div class="content">
-            <h2>{status_info['icon']} {status_info['title']}</h2>
-            <p>Hi <strong>{customer_name}</strong>,</p>
-            <p>{status_info['message']}</p>
-            {custom_message}
-            
+            <h2>{title}</h2>
+            <p>Hi <strong>{_e(customer_name)}</strong>,</p>
+            <p>{text}</p>
+            {extra}
+
             <div class="info-box">
-                <strong>Order ID:</strong> {order_id}<br>
-                <strong>Status:</strong> <span class="status-badge status-{status.lower()}">{status.upper()}</span>
+                <strong>Order ID:</strong> {_e(order_id)}<br>
+                <strong>Status:</strong> <span class="status-badge status-{_e(key)}">{_e(key)}</span>
             </div>
-            
-            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Order Items</h3>
+
+            <h3 style="margin-top: 28px;">Order Items</h3>
             <div class="order-summary">
-                {items_html}
-                <div class="total-row grand-total" style="margin-top: 20px;">
-                    <span>Total:</span>
-                    <span>KES {total:,.2f}</span>
-                </div>
+                {T._items_html(items, with_prices=False)}
+                <table class="total-table" role="presentation" cellpadding="0" cellspacing="0">
+                    <tr class="grand-total"><td>Total</td><td align="right">KES {total:,.2f}</td></tr>
+                </table>
             </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="#" class="button">View Order Details</a>
-            </div>
-            
+
+            {T.button("Track Your Order", T.track_order_url(order_id, email))}
+
             <div class="divider"></div>
-            
-            <p style="color: #6c757d; font-size: 14px;">
-                Need help? Reply to this email or contact our customer support team.
-            </p>
+
+            <p class="small">Need help? Reply to this email or call us on {T.CONTACT_PHONE}.</p>
         </div>
         """
-        
-        preheader = f"Order {order_id} - {status_info['title']}"
-        return EmailTemplates._base_template(content, preheader)
-    
+        preheader = f"Order {order_id}: {title}"
+        return T._base_template(content, preheader)
+
     @staticmethod
     def newsletter_subscription(email: str) -> str:
-        """
-        Newsletter subscription confirmation email
-        
-        Args:
-            email: Subscriber's email
-            
-        Returns:
-            HTML email content
-        """
+        T = EmailTemplates
+        site = _frontend_url()
+        unsubscribe = f"{site}/unsubscribe?{urlencode({'email': email})}"
         content = f"""
         <div class="content">
-            <h2>🎉 Welcome to HoneyBiz Newsletter!</h2>
+            <h2>Welcome to the Pedni Honey Newsletter</h2>
             <p>Hi there,</p>
-            <p>Thank you for subscribing to our newsletter! We're thrilled to have you join our community of beekeeping enthusiasts.</p>
-            
+            <p>Thank you for subscribing. We are glad to have you in our community of honey lovers and beekeepers.</p>
+
             <div class="info-box">
-                <strong>✨ What to Expect:</strong><br><br>
-                • Exclusive discounts and early access to new products<br>
-                • Tips for beekeeping and home ambiance<br>
-                • Behind-the-scenes looks at our honey harvesting process<br>
-                • Special offers just for our subscribers
+                <strong>What to expect:</strong><br>
+                &bull; Offers and early access to new products<br>
+                &bull; Practical beekeeping tips<br>
+                &bull; News from our apiaries and honey harvests<br>
+                &bull; Training dates and special events
             </div>
-            
-            <p>You'll receive our newsletter with the latest updates, special offers, and beekeeping inspiration straight to your inbox.</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="#" class="button">Shop Now</a>
-            </div>
-            
+
+            {T.button("Shop Now", f"{site}/products")}
+
             <div class="divider"></div>
-            
-            <p style="color: #6c757d; font-size: 14px;">
-                <strong>Subscribed Email:</strong> {email}<br><br>
-                You can unsubscribe at any time by clicking the unsubscribe link in any of our emails.
+
+            <p class="small">
+                <strong>Subscribed email:</strong> {_e(email)}<br>
+                You can <a href="{_e(unsubscribe)}" style="color: {T.TEAL};">unsubscribe</a> at any time.
             </p>
         </div>
         """
-        
-        preheader = "Welcome to HoneyBiz! Get ready for exclusive offers and beekeeping inspiration."
-        return EmailTemplates._base_template(content, preheader)
-    
+        preheader = "Welcome to Pedni Honey. Offers, beekeeping tips and news from our apiaries."
+        return T._base_template(content, preheader)
+
     @staticmethod
     def newsletter_unsubscription(email: str) -> str:
-        """
-        Newsletter unsubscription confirmation email
-        
-        Args:
-            email: Subscriber's email
-            
-        Returns:
-            HTML email content
-        """
+        T = EmailTemplates
+        resubscribe = f"{_frontend_url()}/newsletter/resubscribe?{urlencode({'email': email})}"
         content = f"""
         <div class="content">
-            <h2>😢 We're Sorry to See You Go</h2>
+            <h2>You Have Been Unsubscribed</h2>
             <p>Hi there,</p>
-            <p>You have been successfully unsubscribed from the HoneyBiz newsletter.</p>
-            
+            <p>You have been unsubscribed from the Pedni Honey newsletter.</p>
+
             <div class="info-box">
-                <strong>Unsubscribed Email:</strong> {email}<br><br>
-                You will no longer receive promotional emails from us.
+                <strong>Unsubscribed email:</strong> {_e(email)}<br>
+                You will no longer receive our newsletter.
             </div>
-            
-            <p>We're sad to see you go, but we understand. If you change your mind, you're always welcome back!</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="#" class="button">Resubscribe</a>
-            </div>
-            
+
+            <p>If you change your mind, you are always welcome back.</p>
+
+            {T.button("Resubscribe", resubscribe)}
+
             <div class="divider"></div>
-            
-            <p style="color: #6c757d; font-size: 14px;">
-                <strong>Note:</strong> You'll still receive important transactional emails about your orders.<br><br>
-                If you unsubscribed by mistake or have any questions, please reply to this email.
+
+            <p class="small">
+                You will still receive emails about any orders you place with us.
+                If you unsubscribed by mistake, use the button above or reply to this email.
             </p>
         </div>
         """
-        
-        preheader = "You've been unsubscribed from HoneyBiz newsletter."
-        return EmailTemplates._base_template(content, preheader)
+        preheader = "You have been unsubscribed from the Pedni Honey newsletter."
+        return T._base_template(content, preheader)
+
+    @staticmethod
+    def password_reset_otp(customer_name: str, otp: str, expires_in_minutes: int) -> str:
+        T = EmailTemplates
+        content = f"""
+        <div class="content">
+            <h2>Password Reset Request</h2>
+            <p>Hi {_e(customer_name)},</p>
+            <p>We received a request to reset the password for your Pedni Honey account. Your one-time code is:</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <div style="display: inline-block; padding: 15px 30px; font-size: 26px; font-weight: bold;
+                            letter-spacing: 6px; color: {T.DARK_COLOR}; background-color: {T.LIGHT_COLOR};
+                            border: 2px dashed {T.PRIMARY_COLOR}; border-radius: 10px;">
+                    {_e(otp)}
+                </div>
+            </div>
+
+            <p>This code will expire in {expires_in_minutes} minutes.</p>
+
+            <div style="margin-top: 28px; padding: 15px; background-color: #FBE8E0;
+                        border-left: 4px solid {T.WARNING_COLOR}; border-radius: 6px;">
+                <strong>Did not request this?</strong> You can safely ignore this email. Your account is still secure.
+            </div>
+        </div>
+        """
+        preheader = "Your Pedni Honey password reset code."
+        return T._base_template(content, preheader)
+
+    # ------------------------------------------------------------------ admin emails
 
     @staticmethod
     def admin_order_notification(
@@ -548,121 +526,132 @@ class EmailTemplates:
         payment_method: str,
         address: str,
         city: str,
-        county: str
+        county: str,
+        email: Optional[str] = None,
+        phone: Optional[str] = None,
     ) -> str:
-        """
-        Admin notification email template for new orders
-        
-        Args:
-            customer_name: Customer's name
-            order_id: Order ID
-            order_date: Order date
-            items: List of order items
-            subtotal: Subtotal amount
-            shipping: Shipping cost
-            total: Total amount
-            payment_method: Payment method
-            address: Delivery address
-            city: City
-            county: County
-            
-        Returns:
-            HTML email content
-        """
-        # Build items HTML
-        items_html = ""
-        for item in items:
-            items_html += f"""
-            <div class="order-item">
-                <div class="order-item-name">{item['productName']}</div>
-                <div class="order-item-details">
-                    Quantity: {item['quantity']} × KES {item['price']:,.2f} = KES {(item['quantity'] * item['price']):,.2f}
-                </div>
-            </div>
-            """
-        
-        # Payment method display
-        payment_display = payment_method.upper().replace("_", " ")
-        
+        T = EmailTemplates
+        contact = ""
+        if email:
+            contact += f"<strong>Email:</strong> {_e(email)}<br>"
+        if phone:
+            contact += f"<strong>Phone:</strong> {_e(phone)}<br>"
+
         content = f"""
         <div class="content">
-            <h2>🚨 New Order Received!</h2>
-            <p>A new order has been placed by <strong>{customer_name}</strong>.</p>
-            
+            <h2>New Order Received</h2>
+            <p>A new order has been placed by <strong>{_e(customer_name)}</strong>.</p>
+
             <div class="info-box">
-                <strong>Order ID:</strong> {order_id}<br>
-                <strong>Order Date:</strong> {order_date}<br>
-                <strong>Status:</strong> <span class="status-badge status-pending">Pending</span>
+                <strong>Order ID:</strong> {_e(order_id)}<br>
+                <strong>Order Date:</strong> {_e(order_date)}<br>
+                <strong>Status:</strong> <span class="status-badge status-paid">Paid</span>
             </div>
-            
-            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Order Summary</h3>
+
+            <h3 style="margin-top: 28px;">Order Summary</h3>
             <div class="order-summary">
-                {items_html}
-                
-                <div style="margin-top: 20px;">
-                    <div class="total-row">
-                        <span>Subtotal:</span>
-                        <span>KES {subtotal:,.2f}</span>
-                    </div>
-                    <div class="total-row">
-                        <span>Shipping:</span>
-                        <span>KES {shipping:,.2f}</span>
-                    </div>
-                    <div class="total-row grand-total">
-                        <span>Total:</span>
-                        <span>KES {total:,.2f}</span>
-                    </div>
-                </div>
+                {T._items_html(items)}
+                {T._totals_html(subtotal, shipping, total)}
             </div>
-            
-            <h3 style="color: {EmailTemplates.DARK_COLOR}; margin-top: 30px;">Customer Details</h3>
+
+            <h3 style="margin-top: 28px;">Customer Details</h3>
             <div class="info-box">
-                <strong>Address:</strong> {address}<br>
-                <strong>City:</strong> {city}<br>
-                <strong>County:</strong> {county}<br>
-                <strong>Payment Method:</strong> {payment_display}
+                <strong>Name:</strong> {_e(customer_name)}<br>
+                {contact}
+                <strong>Address:</strong> {_e(address)}<br>
+                {('<strong>City:</strong> ' + _e(city) + '<br>') if city and city != county else ''}
+                <strong>County:</strong> {_e(county)}<br>
+                <strong>Payment Method:</strong> {T._payment_display(payment_method)}
             </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="#" class="button">View Order in Dashboard</a>
-            </div>
-            
+
+            {T.button("View Order in Dashboard", T.admin_orders_url(order_id))}
+
             <div class="divider"></div>
-            
-            <p style="color: #6c757d; font-size: 14px;">
-                Please ensure this order is processed promptly.
-            </p>
+
+            <p class="small">Please process this order promptly.</p>
         </div>
         """
-        
         preheader = f"New order {order_id} received from {customer_name}."
-        return EmailTemplates._base_template(content, preheader)
+        return T._base_template(content, preheader)
+
+    # ------------------------------------------------------------------ contact page requests
 
     @staticmethod
-    def password_reset_otp(customer_name: str, otp: str, expires_in_minutes: int) -> str:
-        """
-        Template for password reset OTP.
-        """
+    def _request_details_html(req) -> str:
+        """Rows for every detail the customer filled in."""
+        fields = [
+            ("Request type", "reason"),
+            ("Training type", "training_type"),
+            ("Participants", "participants"),
+            ("Preferred date", "preferred_date"),
+            ("Location", "location"),
+            ("Products", "products"),
+            ("Quantity", "quantity"),
+            ("Subject", "subject"),
+        ]
+        rows = ""
+        for label, attr in fields:
+            value = getattr(req, attr, None)
+            if value not in (None, ""):
+                rows += f"<strong>{label}:</strong> {_e(value)}<br>"
+        return rows
+
+    @staticmethod
+    def admin_request_notification(req) -> str:
+        T = EmailTemplates
+        url = f"{_frontend_url()}/admin/training-requests?{urlencode({'requestId': str(getattr(req, 'id', ''))})}"
+        contact = f"<strong>Email:</strong> {_e(req.email)}<br>"
+        if getattr(req, "phone", None):
+            contact += f"<strong>Phone:</strong> {_e(req.phone)}<br>"
         content = f"""
         <div class="content">
-            <h2>Password Reset Request</h2>
-            
-            <p>Hi {customer_name},</p>
-            <p>We received a request to reset the password for your HoneyBiz account. Your One-Time Password (OTP) is:</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <div style="display: inline-block; padding: 15px 30px; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: {EmailTemplates.PRIMARY_COLOR}; background-color: {EmailTemplates.LIGHT_COLOR}; border: 2px dashed {EmailTemplates.PRIMARY_COLOR}; border-radius: 10px;">
-                    {otp}
-                </div>
+            <h2>New {_e(req.reason)}</h2>
+            <p>A new request has been submitted through the Contact page by <strong>{_e(req.name)}</strong>.</p>
+
+            <div class="info-box">
+                {('<strong>Reference:</strong> ' + _e(req.reference) + '<br>') if getattr(req, 'reference', None) else ''}
+                <strong>Name:</strong> {_e(req.name)}<br>
+                {contact}
             </div>
-            
-            <p>This code will expire in {expires_in_minutes} minutes.</p>
-            
-            <div class="warning-box" style="margin-top: 30px; padding: 15px; background-color: rgba(255, 217, 61, 0.2); border-left: 4px solid {EmailTemplates.WARNING_COLOR}; border-radius: 4px;">
-                <strong>Didn't request this?</strong> If you didn't ask to reset your password, you can safely ignore this email. Your account is still secure.
+
+            <h3 style="margin-top: 28px;">Request Details</h3>
+            <div class="order-summary">
+                {T._request_details_html(req)}
+                <div style="margin-top: 14px;"><strong>Message:</strong></div>
+                <div style="white-space: pre-line; margin-top: 6px;">{_e(req.message)}</div>
             </div>
+
+            {T.button("Open Request in Dashboard", url)}
+
+            <div class="divider"></div>
+            <p class="small">Reply to the customer at {_e(req.email)} or update the request status in your dashboard.</p>
         </div>
         """
-        
-        preheader = "Your password reset OTP code for HoneyBiz."
-        return EmailTemplates._base_template(content, preheader)
+        return T._base_template(content, f"New {req.reason} from {req.name}.")
+
+    @staticmethod
+    def request_received(req) -> str:
+        T = EmailTemplates
+        content = f"""
+        <div class="content">
+            <h2>We Have Received Your Request</h2>
+            <p>Hi <strong>{_e(req.name)}</strong>,</p>
+            <p>Thank you for contacting Pedni Honey. We have received your request and a member of our team
+               will get back to you shortly, usually within one working day.</p>
+
+            {('<div class="info-box"><strong>Your reference: ' + _e(req.reference) + '</strong><br>Please quote it if you call or email us about this request.</div>') if getattr(req, 'reference', None) else ''}
+
+            <h3 style="margin-top: 28px;">Your Request</h3>
+            <div class="order-summary">
+                {T._request_details_html(req)}
+                <div style="margin-top: 14px;"><strong>Your message:</strong></div>
+                <div style="white-space: pre-line; margin-top: 6px;">{_e(req.message)}</div>
+            </div>
+
+            <p>If you need us sooner, call us on <strong>{T.CONTACT_PHONE}</strong>
+               (Monday to Saturday, 8:00 AM to 6:00 PM).</p>
+
+            {T.button("Visit Our Shop", f"{_frontend_url()}/products")}
+        </div>
+        """
+        return T._base_template(content, "Thank you for contacting Pedni Honey. We will get back to you shortly.")
