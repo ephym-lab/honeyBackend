@@ -11,6 +11,15 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/honeybiz
+      - SECRET_KEY=${SECRET_KEY}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_FROM_NAME=Pedni Honey
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
   db:
     image: postgres:15
     container_name: honeybiz_db

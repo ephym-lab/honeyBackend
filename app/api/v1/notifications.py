@@ -41,3 +41,23 @@ async def mark_as_read(
     # but the endpoint schema is SuccessResponse which usually just has success and message.
     # We will return the service output which matches SuccessResponse.
     return service.mark_as_read(notification_id)
+
+
+# Mark all notifications about one order / customer request as read
+from pydantic import BaseModel as _RelatedBase
+
+
+class MarkRelatedRequest(_RelatedBase):
+    related_id: str
+    related_entity: Optional[str] = None
+
+
+@router.patch("/read-related")
+async def mark_related_as_read(
+    body: MarkRelatedRequest,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Mark every unread notification for this order/request as read."""
+    service = NotificationService(db)
+    return service.mark_related_as_read(body.related_id, body.related_entity)

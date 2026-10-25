@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     SUPABASE_BUCKET_NAME: str = "HoneyBiz"
     
     class Config:
+        extra = "ignore"
         env_file = ".env"
         case_sensitive = True
 

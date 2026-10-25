@@ -14,6 +14,8 @@ class EmailService:
         self.password = password or os.getenv("EMAIL_PASSWORD")
         self.from_email = from_email or os.getenv("EMAIL_FROM", "ephymucira@gmail.com")
         self.from_name = from_name or os.getenv("EMAIL_FROM_NAME", "HoneyBiz")
+        # Where customer replies go (can differ from the sending address)
+        self.reply_to = (os.getenv("REPLY_TO_EMAIL") or "").strip()
         
         if not self.username or not self.password:
             print("Warning: EMAIL_USERNAME or EMAIL_PASSWORD not set. Email sending will fail.")
@@ -24,6 +26,8 @@ class EmailService:
             msg['From'] = f"{self.from_name} <{self.from_email}>"
             msg['To'] = to_email
             msg['Subject'] = subject
+            if self.reply_to:
+                msg['Reply-To'] = self.reply_to
 
             content_type = "html" if is_html else "plain"
             msg.attach(MIMEText(body, content_type))

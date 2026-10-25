@@ -1,7 +1,8 @@
 from abc import ABC
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from datetime import date
+from datetime import date, timedelta
+from sqlalchemy import func
 from typing import Optional
 import uuid
 import os
@@ -38,6 +39,7 @@ class OrderService(OrderManagerService):
         """
         try:
             html_body = EmailTemplates.order_confirmation(
+                email=order.email,
                 # pyrefly: ignore [bad-argument-type]
                 customer_name=order.customer_name,
                 # pyrefly: ignore [bad-argument-type]
@@ -78,6 +80,7 @@ class OrderService(OrderManagerService):
         """
         try:
             html_body = EmailTemplates.order_status_update(
+                email=order.email,
                 # pyrefly: ignore [bad-argument-type]
                 customer_name=order.customer_name,
                 # pyrefly: ignore [bad-argument-type]
@@ -102,6 +105,8 @@ class OrderService(OrderManagerService):
         """
         try:
             html_body = EmailTemplates.admin_order_notification(
+                email=order.email,
+                phone=order.phone,
                 # pyrefly: ignore [bad-argument-type]
                 customer_name=order.customer_name,
                 # pyrefly: ignore [bad-argument-type]
@@ -146,16 +151,22 @@ class OrderService(OrderManagerService):
         Raises:
             HTTPException: If order creation fails or products not found
         """
+        # Free up stock held by M-Pesa orders that were never paid
+        self.expire_unpaid_mpesa_orders()
+
         try:
             # Calculate totals and validate products
             items_with_details = []
             subtotal = 0
             
-            for item in order_data.items:
-                # Get product details
+            # Lock each product while this order is saved, so two customers cannot
+            # both buy the last item at the same moment. Products are locked in a fixed
+            # order (by id) so two orders can never wait for each other forever.
+            for item in sorted(order_data.items, key=lambda i: str(i.productId)):
+                # Get product details (locked until this order is saved)
                 product = self.db.query(Products).filter(
                     Products.id == item.productId
-                ).first()
+                ).with_for_update().first()
                 
                 if not product:
                     raise HTTPException(
@@ -163,8 +174,9 @@ class OrderService(OrderManagerService):
                         detail=f"Product {item.productId} not found"
                     )
                 
-                # Check stock
-                if product.stock < item.quantity:
+                # Check stock (adding up the same product listed twice in one order)
+                wanted = sum(i.quantity for i in order_data.items if str(i.productId) == str(item.productId))
+                if product.stock < wanted:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Insufficient stock for {product.name}. Available: {product.stock}"
@@ -183,7 +195,13 @@ class OrderService(OrderManagerService):
                 })
             
             # Calculate shipping (flat rate for now)
-            shipping = 500  # KES 500 flat shipping
+            # Delivery fee by zone + weight (Admin > Delivery)
+            from app.services import delivery_service
+            shipping = delivery_service.quote_for_items(
+                self.db,
+                [(item.productId, item.quantity) for item in order_data.items],
+                order_data.county,
+            )["shipping"]
             total = subtotal + shipping
             
             # Generate order ID
@@ -222,32 +240,10 @@ class OrderService(OrderManagerService):
             self.db.commit()
             self.db.refresh(new_order)
             
-            # Send confirmation email (non-blocking)
-            try:
-                self._send_order_confirmation_email(order=new_order)
-            except Exception as e:
-                print(f"Order created but email failed: {str(e)}")
-
-            # Send admin notification (non-blocking)
-            try:
-                self._send_admin_order_notification(order=new_order)
-            except Exception as e:
-                print(f"Order created but admin notification failed: {str(e)}")
-
-            # Create in-app notification for the frontend dashboard
-            try:
-                notification_service = NotificationService(self.db)
-                title = "New Order Received"
-                message = f"Customer {new_order.customer_name} placed an order for KES {new_order.total:,.2f}"
-                notification_service.create_notification(
-                    title=title,
-                    message=message,
-                    notification_type="new_order",
-                    related_entity="Order",
-                    related_id=new_order.id # pyrefly: ignore [bad-argument-type]
-                )
-            except Exception as e:
-                print(f"Failed to create in-app notification: {str(e)}")
+            # M-Pesa orders are announced (customer email, admin email, bell) only once
+            # they are PAID - see update_order_status. Other orders: straight away.
+            if new_order.payment_method != "mpesa":
+                self._announce_new_order(new_order)
             
             return {
                 "success": True,
@@ -354,6 +350,11 @@ class OrderService(OrderManagerService):
                 detail="Order not found"
             )
         
+        previous_status = str(order.status or "").lower()
+
+        # Return stock when cancelling (or take it out again when re-opening)
+        self._adjust_stock_for_status_change(order, order.status, status)
+
         # pyrefly: ignore [bad-assignment]
         order.status = status
         if mpesa_transaction_id:
@@ -363,16 +364,26 @@ class OrderService(OrderManagerService):
         self.db.commit()
         self.db.refresh(order)
         
-        #send email notification about status update 
-        try:
-            self._send_order_status_email(
-                order=order,
-                status=status,
-                message=f"Your order status has been updated."
-            )
-            print(f"Status update email sent to {order.email} successfully.")
-        except Exception as e:
-            print(f"Status update email failed: {str(e)}")
+        just_paid = (
+            previous_status == "pending"
+            and str(status).lower() == "paid"
+            and order.payment_method == "mpesa"
+        )
+        if just_paid:
+            # First news of this order: full confirmation to the customer,
+            # new-order email to the admin and the bell notification
+            self._announce_new_order(order)
+        else:
+            #send email notification about status update 
+            try:
+                self._send_order_status_email(
+                    order=order,
+                    status=status,
+                    message=f"Your order status has been updated."
+                )
+                print(f"Status update email sent to {order.email} successfully.")
+            except Exception as e:
+                print(f"Status update email failed: {str(e)}")
 
         
         return {
@@ -408,6 +419,8 @@ class OrderService(OrderManagerService):
         Returns:
             dict: Response with message and list of orders
         """
+        self.expire_unpaid_mpesa_orders()
+
         try:
             orders = self.db.query(Order).order_by(Order.created_at.desc()).all()
             return {
@@ -674,6 +687,16 @@ class OrderService(OrderManagerService):
             
             self.db.commit()
             
+            # Let the customer know (never blocks the cancellation)
+            
+            try:
+            
+                self._send_order_status_email(order=order, status="cancelled")
+            
+            except Exception as e:
+            
+                print(f"Cancellation email failed: {e}")
+            
             return {
                 "success": True,
                 "message": f"Order {order_id} has been cancelled successfully"
@@ -796,3 +819,116 @@ class OrderService(OrderManagerService):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to bulk delete orders: {str(e)}"
             )
+
+
+    # ------------------------------------------------------------------ stock helpers
+
+    def _change_stock(self, order, direction: int):
+        """direction=+1 puts the order's items back in stock, -1 takes them out again."""
+        for item in order.items or []:
+            product = self.db.query(Products).filter(
+                Products.id == item["productId"]
+            ).first()
+            if not product:
+                continue
+            if direction < 0 and product.stock < item["quantity"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Not enough stock to re-open this order: {product.name} has {product.stock} left"
+                )
+            product.stock += direction * item["quantity"]
+
+    def _adjust_stock_for_status_change(self, order, previous_status, new_status):
+        """Cancelling returns stock; re-opening a cancelled order takes it out again."""
+        was_cancelled = str(previous_status or "").lower() == "cancelled"
+        now_cancelled = str(new_status or "").lower() == "cancelled"
+        if now_cancelled and not was_cancelled:
+            self._change_stock(order, +1)
+        elif was_cancelled and not now_cancelled:
+            self._change_stock(order, -1)
+
+    def expire_unpaid_mpesa_orders(self):
+        """
+        Cancel M-Pesa orders still unpaid after UNPAID_ORDER_TIMEOUT_HOURS (from .env)
+        and return their stock. 0 (the default) switches this off.
+        """
+        try:
+            hours = float(os.getenv("UNPAID_ORDER_TIMEOUT_HOURS", "0") or 0)
+        except ValueError:
+            hours = 0
+        if hours <= 0:
+            return 0
+
+        try:
+            stale = self.db.query(Order).filter(
+                Order.status == "pending",
+                Order.payment_method == "mpesa",
+                Order.created_at < func.now() - timedelta(hours=hours),
+            ).all()
+            if not stale:
+                return 0
+
+            for order in stale:
+                self._change_stock(order, +1)
+                order.status = "cancelled"
+            self.db.commit()
+
+            shown = int(hours) if hours == int(hours) else hours
+            for order in stale:
+                print(f"[Orders] Auto-cancelled unpaid M-Pesa order {order.id}")
+                try:
+                    from app.services.notification_service import NotificationService
+                    NotificationService(self.db).create_notification(
+                        title=f"Order {order.id} cancelled - not paid",
+                        message=(f"{order.customer_name} did not pay order {order.id} "
+                                 f"(KSh {int(order.total or 0):,}) within {shown} hours, so it was "
+                                 "cancelled automatically. The items are back in stock."),
+                        notification_type="order_cancelled",
+                        priority="low",
+                        related_entity="Order",
+                        related_id=str(order.id),
+                    )
+                except Exception as e:
+                    print(f"[Orders] Could not create auto-cancel notification for {order.id}: {e}")
+                try:
+                    self._send_order_status_email(
+                        order=order,
+                        status="cancelled",
+                        message=(
+                            f"We did not receive your M-Pesa payment within {shown} hours, "
+                            "so this order has been cancelled and the items released. "
+                            "You are welcome to place the order again at any time."
+                        ),
+                    )
+                except Exception as e:
+                    print(f"Auto-cancel email failed for {order.id}: {e}")
+            return len(stale)
+        except Exception as e:
+            self.db.rollback()
+            print(f"[Orders] Could not expire unpaid orders: {e}")
+            return 0
+
+
+    def _announce_new_order(self, order):
+        """Customer confirmation email, admin new-order email and the admin bell notification."""
+        try:
+            self._send_order_confirmation_email(order=order)
+        except Exception as e:
+            print(f"Order confirmation email failed: {str(e)}")
+        try:
+            self._send_admin_order_notification(order=order)
+        except Exception as e:
+            print(f"Admin new-order email failed: {str(e)}")
+        try:
+            paid = str(order.status or "").lower() == "paid"
+            NotificationService(self.db).create_notification(
+                title="New Paid Order" if paid else "New Order Received",
+                message=f"Customer {order.customer_name} "
+                        f"{'paid' if paid else 'placed an order'} KES {order.total:,.2f}"
+                        f"{' by M-Pesa' if paid else ''}",
+                notification_type="new_order",
+                related_entity="Order",
+                related_id=order.id,
+            )
+        except Exception as e:
+            print(f"Failed to create in-app notification: {str(e)}")

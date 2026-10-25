@@ -36,7 +36,7 @@ class OrderBase(BaseModel):
 class OrderCreate(OrderBase):
     email: EmailStr
     items: List[OrderItem] = Field(min_length=1)
-    paymentMethod: Literal["mpesa", "cash"]
+    paymentMethod: Literal["mpesa"] = "mpesa"  # cash on delivery removed - M-Pesa only
     mpesaPhone: Optional[PhoneType] = None
 
 

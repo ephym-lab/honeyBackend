@@ -263,7 +263,7 @@ class ReviewService(ReviewManagerService):
             return {
                 "success": True,
                 "data": {
-                    "reviews": reviews,
+                    "reviews": self._with_product_names(reviews),
                     "count": total_count,
                     "verified_count": verified_count,
                     "unverified_count": unverified_count
@@ -305,6 +305,7 @@ class ReviewService(ReviewManagerService):
         
         try:
             review.verified = False
+            review.featured = False
             self.db.commit()
             self.db.refresh(review)
             
@@ -331,9 +332,12 @@ class ReviewService(ReviewManagerService):
             HTTPException: If database error occurs
         """
         try:
-            reviews = self.db.query(Review).filter(
-                Review.verified == True
-            ).order_by(Review.created_at.desc()).all()
+            base = self.db.query(Review).filter(Review.verified == True)
+            # Home page shows the reviews the admin featured.
+            # If none are featured yet, it falls back to all verified reviews.
+            reviews = base.filter(Review.featured == True).order_by(Review.created_at.desc()).all()
+            if not reviews:
+                reviews = base.order_by(Review.created_at.desc()).all()
             
             # Enrich reviews with product information
             reviews_data = []
@@ -347,6 +351,9 @@ class ReviewService(ReviewManagerService):
                     "productId": str(review.product_id),
                     "productName": product.name if product else "Unknown Product",
                     "customerName": review.author,
+                    "author": review.author,
+                    "role": f"Verified buyer - {product.name}" if product else "Verified buyer",
+                    "featured": bool(review.featured),
                     "email": review.email,
                     "rating": review.rating,
                     "comment": review.comment,
@@ -365,4 +372,56 @@ class ReviewService(ReviewManagerService):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve verified reviews: {str(e)}"
+            )
+
+    def _with_product_names(self, reviews):
+        """Reviews as plain data, each with its product's name (for the admin page)."""
+        ids = {r.product_id for r in reviews}
+        names = {}
+        if ids:
+            for pid, name in self.db.query(Products.id, Products.name).filter(Products.id.in_(ids)).all():
+                names[pid] = name
+        return [
+            {
+                "id": str(r.id),
+                "product_id": str(r.product_id),
+                "productName": names.get(r.product_id, "Deleted product"),
+                "author": r.author,
+                "email": r.email,
+                "rating": r.rating,
+                "comment": r.comment,
+                "date": r.date,
+                "verified": bool(r.verified),
+                "featured": bool(getattr(r, "featured", False)),
+                "created_at": r.created_at,
+            }
+            for r in reviews
+        ]
+
+
+    def set_featured(self, review_id: UUID, featured: bool):
+        """Feature / unfeature a review on the Home page (admin only).
+        Featuring also verifies it, because it becomes public."""
+        review = self.db.query(Review).filter(Review.id == review_id).first()
+        if not review:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Review with ID {review_id} not found"
+            )
+        try:
+            review.featured = bool(featured)
+            if featured:
+                review.verified = True
+            self.db.commit()
+            self.db.refresh(review)
+            return {
+                "success": True,
+                "message": "Review featured on the Home page" if featured else "Review removed from the Home page",
+                "data": review
+            }
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update review: {str(e)}"
             )

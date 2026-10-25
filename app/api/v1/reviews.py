@@ -144,3 +144,24 @@ async def get_verified_reviews(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}"
         )
+
+
+# Feature / unfeature a review on the Home page (Admin only)
+@router.patch("/products/{product_id}/reviews/{review_id}/feature")
+async def feature_review(
+    product_id: UUID,
+    review_id: UUID,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    return ReviewService(db).set_featured(review_id, True)
+
+
+@router.patch("/products/{product_id}/reviews/{review_id}/unfeature")
+async def unfeature_review(
+    product_id: UUID,
+    review_id: UUID,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    return ReviewService(db).set_featured(review_id, False)

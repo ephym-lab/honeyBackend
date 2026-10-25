@@ -18,6 +18,11 @@ class ProductBase(BaseModel):
     image_cover: str
     category: str
     stock: int
+    badge: Optional[str] = None
+    delivery_time: Optional[str] = None
+    return_policy: Optional[str] = None
+    weight_kg: Optional[float] = None  # kg per unit, for delivery pricing
+    low_stock_level: Optional[int] = None  # low-stock alert level (empty = 5)
     tags: Optional[List[str]] = None
     images: Optional[List[str]] = None
     features: Optional[List[str]] = None
@@ -39,6 +44,11 @@ class ProductUpdate(BaseModel):
     image_cover: Optional[str] = None
     category: Optional[str] = None
     stock: Optional[int] = None
+    badge: Optional[str] = None
+    delivery_time: Optional[str] = None
+    return_policy: Optional[str] = None
+    weight_kg: Optional[float] = None  # kg per unit, for delivery pricing
+    low_stock_level: Optional[int] = None  # low-stock alert level (empty = 5)
     tags: Optional[List[str]] = None
     images: Optional[List[str]] = None
     features: Optional[List[str]] = None
@@ -72,6 +82,11 @@ class ProductListItem(BaseModel):
     image_cover: Optional[str] = None
     category: Optional[str] = None
     stock: Optional[int] = None
+    badge: Optional[str] = None
+    delivery_time: Optional[str] = None
+    return_policy: Optional[str] = None
+    weight_kg: Optional[float] = None  # kg per unit, for delivery pricing
+    low_stock_level: Optional[int] = None  # low-stock alert level (empty = 5)
 
     class Config:
         from_attributes = True

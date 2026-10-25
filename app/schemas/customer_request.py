@@ -12,6 +12,9 @@ class CustomerRequestBase(BaseModel):
     participants: Optional[int] = None
     preferred_date: Optional[str] = None
     location: Optional[str] = None
+    products: Optional[str] = None
+    quantity: Optional[str] = None
+    subject: Optional[str] = None
     message: str
 
 class CustomerRequestCreate(CustomerRequestBase):
@@ -22,6 +25,8 @@ class CustomerRequestUpdateStatus(BaseModel):
 
 class CustomerRequestResponse(CustomerRequestBase):
     id: uuid.UUID
+    ref_no: Optional[int] = None
+    reference: Optional[str] = None  # e.g. REQ-0042
     status: str
     created_at: datetime
     updated_at: datetime

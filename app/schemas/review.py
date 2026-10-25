@@ -20,6 +20,7 @@ class Review(ReviewBase):
     product_id: UUID
     date: date
     verified: bool
+    featured: Optional[bool] = False
     created_at: datetime
     
     class Config:

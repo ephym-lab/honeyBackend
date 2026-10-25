@@ -23,6 +23,42 @@ from app.services.file_service import upload_local_file
 
 router = APIRouter()
 
+
+def _clean_text(value, limit):
+    """'' or 'None' -> None (nothing set); otherwise trimmed text."""
+    if value is None:
+        return None
+    value = str(value).strip()
+    if value == "" or value.lower() == "none":
+        return None
+    return value[:limit]
+
+
+def _parse_level(value):
+    """'' or None -> None (use the default of 5); otherwise a whole number of units."""
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        level = int(float(value))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Low stock level must be a whole number, e.g. 5")
+    if level < 0 or level > 100000:
+        raise HTTPException(status_code=400, detail="Low stock level must be between 0 and 100000")
+    return level
+
+
+def _parse_weight(value):
+    """'' or None -> None (use default weight); otherwise kg as a float."""
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        kg = float(value)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Weight must be a number of kilograms, e.g. 0.5")
+    if kg < 0 or kg > 1000:
+        raise HTTPException(status_code=400, detail="Weight must be between 0 and 1000 kg")
+    return round(kg, 2)
+
 def parse_json_field(field_val: Optional[str], field_name: str):
     if not field_val or not field_val.strip():
         return None
@@ -134,6 +170,11 @@ async def create_product(
     price: int = Form(...),
     category: str = Form(...),
     stock: int = Form(...),
+    badge: Optional[str] = Form(None),
+    deliveryTime: Optional[str] = Form(None),
+    returnPolicy: Optional[str] = Form(None),
+    weight_kg: Optional[str] = Form(None),  # kg per unit
+    low_stock_level: Optional[str] = Form(None),  # low-stock alert level ('' = 5)
     image_cover: UploadFile = File(..., description="Main product image (required)"),
     additional_images: Optional[List[UploadFile]] = File(None, description="Additional product images (max 2)"),
     tags: Optional[str] = Form(None),  # JSON string
@@ -214,6 +255,11 @@ async def create_product(
         image_cover=main_image_url,
         category=category,
         stock=stock,
+        badge=_clean_text(badge, 50),
+        delivery_time=_clean_text(deliveryTime, 100),
+        return_policy=_clean_text(returnPolicy, 150),
+        weight_kg=_parse_weight(weight_kg),
+        low_stock_level=_parse_level(low_stock_level),
         images=additional_image_urls if additional_image_urls else None,
         tags=tags_list,
         features=features_list,
@@ -233,6 +279,11 @@ async def update_product(
     price: Optional[int] = Form(None),
     category: Optional[str] = Form(None),
     stock: Optional[int] = Form(None),
+    badge: Optional[str] = Form(None),
+    deliveryTime: Optional[str] = Form(None),
+    returnPolicy: Optional[str] = Form(None),
+    weight_kg: Optional[str] = Form(None),  # kg per unit ('' clears it)
+    low_stock_level: Optional[str] = Form(None),  # low-stock alert level ('' = 5)
     image_cover: Optional[UploadFile] = File(None, description="New main product image"),
     additional_images: Optional[List[UploadFile]] = File(None, description="New additional images (max 2)"),
     tags: Optional[str] = Form(None),  # JSON string
@@ -325,6 +376,16 @@ async def update_product(
         update_dict['category'] = category
     if stock is not None:
         update_dict['stock'] = stock
+    if badge is not None:
+        update_dict['badge'] = _clean_text(badge, 50)
+    if deliveryTime is not None:
+        update_dict['delivery_time'] = _clean_text(deliveryTime, 100)
+    if returnPolicy is not None:
+        update_dict['return_policy'] = _clean_text(returnPolicy, 150)
+    if weight_kg is not None:
+        update_dict['weight_kg'] = _parse_weight(weight_kg)
+    if low_stock_level is not None:
+        update_dict['low_stock_level'] = _parse_level(low_stock_level)
     if tags_list is not None:
         update_dict['tags'] = tags_list
     if features_list is not None:
