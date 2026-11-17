@@ -1,6 +1,7 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 from dotenv import load_dotenv
 import os
 
@@ -20,7 +21,8 @@ class EmailService:
         if not self.username or not self.password:
             print("Warning: EMAIL_USERNAME or EMAIL_PASSWORD not set. Email sending will fail.")
 
-    def send_email(self, to_email, subject, body, is_html=False):
+    def send_email(self, to_email, subject, body, is_html=False, attachments=None):
+        """attachments: optional list of (filename, bytes, subtype) e.g. ('receipt.pdf', data, 'pdf')"""
         try:
             msg = MIMEMultipart()
             msg['From'] = f"{self.from_name} <{self.from_email}>"
@@ -31,6 +33,11 @@ class EmailService:
 
             content_type = "html" if is_html else "plain"
             msg.attach(MIMEText(body, content_type))
+
+            for filename, data, subtype in (attachments or []):
+                part = MIMEApplication(data, _subtype=subtype)
+                part.add_header("Content-Disposition", "attachment", filename=filename)
+                msg.attach(part)
 
             with smtplib.SMTP(self.host, self.port) as server:
                 server.starttls()
@@ -44,5 +51,5 @@ class EmailService:
             print(f"Failed to send email: {str(e)}")
             return False
             
-    def send_html_email(self, to_email, subject, html_body):
-        return self.send_email(to_email, subject, html_body, is_html=True)
+    def send_html_email(self, to_email, subject, html_body, attachments=None):
+        return self.send_email(to_email, subject, html_body, is_html=True, attachments=attachments)

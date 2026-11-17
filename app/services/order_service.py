@@ -64,8 +64,17 @@ class OrderService(OrderManagerService):
             )
             
             subject = f"Order Confirmation - {order.id}"
-            self.email_service.send_html_email(order.email, subject, html_body)
-            print(f"Order confirmation email sent to {order.email}")
+            attachments = []
+            # Paid orders get a PDF payment receipt attached (never blocks the email)
+            if str(order.status or "").lower() in ("paid", "processing", "shipped", "delivered"):
+                try:
+                    from app.services.receipt_pdf import build_receipt, receipt_number
+                    attachments.append((f"Pedni-Honey-Receipt-{receipt_number(order.id)}.pdf", build_receipt(order), "pdf"))
+                    subject = f"Payment Receipt & Order Confirmation - {order.id}"
+                except Exception as e:
+                    print(f"[Receipts] Could not create receipt for {order.id}: {e}")
+            self.email_service.send_html_email(order.email, subject, html_body, attachments=attachments)
+            print(f"Order confirmation email sent to {order.email}" + (" with receipt" if attachments else ""))
         except Exception as e:
             print(f"Failed to send order confirmation email: {str(e)}")
     
