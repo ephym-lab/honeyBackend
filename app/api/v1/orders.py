@@ -382,3 +382,35 @@ def cancel_unpaid_order(
     except Exception as e:
         print(f"[Orders] Could not create cancel notification for {order_id}: {e}")
     return {"success": True, "data": {"orderId": order_id, "state": "cancelled"}}
+
+
+# ---------------------------------------------------------------------------
+# Admin help: "I paid but got no email"  [pedni-order-help]
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel as _HelpModel, EmailStr as _HelpEmail
+from app.services import payment_recovery as _recovery
+
+
+class _ResendRequest(_HelpModel):
+    email: Optional[_HelpEmail] = None
+
+
+@router.post("/{order_id}/check-payment")
+def admin_check_payment(
+    order_id: str,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Ask Paystack whether this order was paid; mark it paid and email the customer if so."""
+    return {"success": True, "data": _recovery.check_payment(db, order_id)}
+
+
+@router.post("/{order_id}/resend-confirmation")
+def admin_resend_confirmation(
+    order_id: str,
+    request: _ResendRequest,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Send the confirmation email (with PDF receipt) again, optionally to a corrected address."""
+    return {"success": True, "data": _recovery.resend_confirmation(db, order_id, request.email)}
